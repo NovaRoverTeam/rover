@@ -9,6 +9,10 @@
 #define MAX_PWM 4096
 #define HERTZ 50
 
+#define MAX_PULSE 600
+#define MIN_PULSE 150
+
+#include "gamepad/gamepad.h"
 
 // Calculate the number of ticks the signal should be high for the required amount of time
 int calcTicks(float impulseMs, int hertz)
@@ -33,11 +37,29 @@ int main(int argc, char **argv)
     return fd;
   }
 
-  // Reset all output
-  pca9685PWMReset(fd);
+  pca9685PWMReset(fd); // Reset all output
+
+  GamepadInit(); // Initialise the Xbox gamepad
 
   while (ros::ok())
   {
+    GamepadUpdate();
+
+    int l_stick_x = 0;
+    int l_stick_y = 0;
+
+    GamepadStickXY(GAMEPAD_0, STICK_LEFT, &l_stick_x, &l_stick_y);
+
+    float stick_x = ((float) l_stick_x)/32767;
+    float stick_y = ((float) l_stick_y)/32767;
+
+    int pulse_12 = (int)(MIN_PULSE + stick_x*(MAX_PULSE-MIN_PULSE));
+    int pulse_13 = (int)(MIN_PULSE + stick_y*(MAX_PULSE-MIN_PULSE));
+
+    pwmWrite(PIN_BASE + 12, pulse_12);
+    pwmWrite(PIN_BASE + 13, pulse_13);
+
+    /*
     pwmWrite(PIN_BASE + 4, value);
   
     if (increasing) 
@@ -51,6 +73,7 @@ int main(int argc, char **argv)
       increasing = true;
 	
     ROS_INFO_STREAM(value);
+    */
 
     ros::spinOnce();
     loop_rate.sleep();
