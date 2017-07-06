@@ -1,0 +1,39 @@
+<launch>
+  <!-- Roslaunch file to run nodes in mainframe. -->
+
+  <node name="overlord" pkg="mainframe" type="overlord" output="screen" />
+
+  <node name="controls" pkg="mainframe" type="controls" output="screen" />
+
+  <node name="sim_rover" pkg="mainframe" type="sim_rover" output="screen"/>
+  
+  <!-- We resume the logic in empty_world.launch, changing only the name of the world to be launched -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find mainframe)/launch/rocky2.world"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="true"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="false"/>
+  </include>
+
+  <!-- Load URDF model into ROS parameter server, IMPORTANT!!! -->
+  <param name="robot_description"
+  command="$(find xacro)/xacro --inorder '$(find mainframe)/urdf/sim_rover_1.urdf'"/>
+
+  <!-- Store robot name -->
+  <param name="robot_name" type="str" value="sim_rover_1"/>
+
+  <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
+args="-urdf -model RoveyMcRoveface -z 10 -param robot_description"/>
+
+  <!-- Load joint controller configs into ROS parameter server -->
+  <rosparam file="$(find mainframe)/config/sim_rover_config.yaml" command="load"/>
+
+<!-- load the controllers -->
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" ns="/sim_rover_1" args="joint_states 
+      bleg_r_eff bleg_l_eff fleg_r_eff fleg_l_eff
+      bwheel_r_eff bwheel_l_eff fwheel_r_eff fwheel_l_eff
+      bsteer_r_eff bsteer_l_eff fsteer_r_eff fsteer_l_eff "/>
+
+</launch>
