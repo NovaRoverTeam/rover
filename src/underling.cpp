@@ -19,6 +19,28 @@ static volatile float ang_vel = 0;
 
 #include "gamepad/gamepad.h"
 
+void encISR() 
+{
+  ++enc_count;
+}
+
+PI_THREAD (encThread)
+{
+  wiringPiISR(ENC_PIN, INT_EDGE_RISING, &encISR);
+
+  float del_time = 1000.0/((float)ENC_HZ);
+  float two_pi = 2.0*M_PI;
+
+  for (;;)
+  {
+    enc_count = 0;
+    delay(del_time); // Delay in ms between readings
+
+    ang_vel = two_pi*(((float)enc_count)/24.0)/del_time;
+    ROS_INFO("Angular velocity: %.2f rad/s.", ang_vel);
+  }
+}
+
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "underling");
@@ -78,30 +100,7 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
-void encISR() 
-{
-  ++enc_count;
-}
-
-PI_THREAD (encThread)
-{
-  wiringPiISR(ENC_PIN, INT_EDGE_RISING, &encISR);
-
-  float del_time = 1000.0/((float)ENC_HZ);
-  float two_pi = 2.0*M_PI;
-
-  for (;;)
-  {
-    enc_count = 0;
-    delay(del_time); // Delay in ms between readings
-
-    ang_vel = two_pi*(((float)enc_count)/24.0)/del_time;
-    ROS_INFO("Angular velocity: %.2f rad/s.", ang_vel);
-  }
-}
-
-  
+ 
   /* ------ FOR 50Hz SERVOS --------
   #define MAX_PULSE 600
   #define MIN_PULSE 150
