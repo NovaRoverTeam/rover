@@ -11,12 +11,11 @@
 
 #define DIR_PIN 24
 
-/* ------ FOR 50Hz SERVOS --------
-#define MAX_PULSE 600
-#define MIN_PULSE 150
-*/
+#define ENC_PIN //TODO
+#define ENC_HZ 10
 
-//#define THRES 0.5
+static volatile int enc_count = 0;
+static volatile float ang_vel = 0;
 
 #include "gamepad/gamepad.h"
 
@@ -25,11 +24,6 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "underling");
   ros::NodeHandle n;
   ros::Rate loop_rate(HERTZ); // 1000 Hz
-
-  /*--------- FIRST TEST, SERVO SWEEP -------------
-  bool increasing = true;
-  int value = 200;
-  */
 
   int PWM_val = 0;
   bool dir = HIGH;
@@ -43,16 +37,9 @@ int main(int argc, char **argv)
 
   pca9685PWMReset(fd); // Reset all output
 
-  /* --------- SECOND TEST, ROBOT ARM CONTROLLER -------------
-  GamepadInit(); // Initialise the Xbox gamepad
-  int mid = MIN_PULSE + (MAX_PULSE - MIN_PULSE);
-  int pulse_12 = mid;
-  int pulse_13 = mid;
-  int pulse_14 = mid;
-  int pulse_15 = mid;
-  */
-
   GamepadInit();
+
+  piThreadCreate (encThread); // Start encoders thread
 
   wiringPiSetup();
   pinMode (DIR_PIN, OUTPUT);
@@ -81,9 +68,60 @@ int main(int argc, char **argv)
       digitalWrite (DIR_PIN, dir);
     }
 
-    ROS_INFO_STREAM(PWM_val);
+    //ROS_INFO_STREAM(PWM_val);
 
     pwmWrite(PIN_BASE + 15, PWM_val);
+
+    ros::spinOnce();
+    loop_rate.sleep();
+  }
+
+  return 0;
+}
+
+void encISR() 
+{
+  ++enc_count;
+}
+
+PI_THREAD (encThread)
+{
+  wiringPiISR(ENC_PIN, INT_EDGE_RISING, &encISR);
+
+  float del_time = 1000.0/((float)ENC_HZ);
+  float two_pi = 2.0*M_PI;
+
+  for (;;)
+  {
+    enc_count = 0;
+    delay(del_time); // Delay in ms between readings
+
+    ang_vel = two_pi*(((float)enc_count)/24.0)/del_time;
+    ROS_INFO("Angular velocity: %.2f rad/s.", ang_vel);
+  }
+}
+
+  
+  /* ------ FOR 50Hz SERVOS --------
+  #define MAX_PULSE 600
+  #define MIN_PULSE 150
+  */
+
+  //#define THRES 0.5
+
+  /*--------- FIRST TEST, SERVO SWEEP -------------
+  bool increasing = true;
+  int value = 200;
+  */
+
+  /* --------- SECOND TEST, ROBOT ARM CONTROLLER -------------
+  GamepadInit(); // Initialise the Xbox gamepad
+  int mid = MIN_PULSE + (MAX_PULSE - MIN_PULSE);
+  int pulse_12 = mid;
+  int pulse_13 = mid;
+  int pulse_14 = mid;
+  int pulse_15 = mid;
+  */
 
     /* --------- SECOND TEST, ROBOT ARM CONTROLLER -------------
     GamepadUpdate();
@@ -164,11 +202,4 @@ int main(int argc, char **argv)
 	
     ROS_INFO_STREAM(value);
     */
-
-    ros::spinOnce();
-    loop_rate.sleep();
-  }
-
-  return 0;
-}
 
