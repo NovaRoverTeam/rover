@@ -31,7 +31,8 @@ int main(int argc, char **argv)
   int value = 200;
   */
 
-  float PWM_val = 0;
+  int PWM_val = 0;
+  bool dir = HIGH;
 
   int fd = pca9685Setup(PIN_BASE, 0x40, HERTZ);
   if (fd < 0)
@@ -51,9 +52,11 @@ int main(int argc, char **argv)
   int pulse_15 = mid;
   */
 
+  GamepadInit();
+
   wiringPiSetup();
   pinMode (DIR_PIN, OUTPUT);
-  digitalWrite (DIR_PIN, HIGH);
+  digitalWrite (DIR_PIN, dir);
 
   while (ros::ok())
   {
@@ -62,14 +65,25 @@ int main(int argc, char **argv)
     bool r_trigger = GamepadTriggerDown(GAMEPAD_0, TRIGGER_RIGHT);
     bool l_trigger = GamepadTriggerDown(GAMEPAD_0, TRIGGER_LEFT);
   
+    bool a_but = GamepadButtonTriggered(GAMEPAD_0, BUTTON_A);
+
     if (r_trigger == true)
-      PWM_val += 0.1;
+      PWM_val += 1;
     else if (l_trigger == true)
-      PWM_val -= 0.1;
+      PWM_val -= 1;
 
-    ROS_INFO_STREAM((int)PWM_val);
+    if (PWM_val < 0) PWM_val = 0;
+    else if (PWM_val > MAX_PWM) PWM_val = MAX_PWM;
 
-    pwmWrite(PIN_BASE + 15, (int)PWM_val);
+    if ((a_but == true) && (PWM_val == 0))
+    {
+      dir = !dir;
+      digitalWrite (DIR_PIN, dir);
+    }
+
+    ROS_INFO_STREAM(PWM_val);
+
+    pwmWrite(PIN_BASE + 15, PWM_val);
 
     /* --------- SECOND TEST, ROBOT ARM CONTROLLER -------------
     GamepadUpdate();
