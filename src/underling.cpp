@@ -11,7 +11,7 @@
 
 #define DIR_PIN 24
 
-#define ENC_PIN //TODO
+#define ENC_PIN 25
 #define ENC_HZ 10
 
 static volatile int enc_count = 0;
@@ -28,16 +28,18 @@ PI_THREAD (encThread)
 {
   wiringPiISR(ENC_PIN, INT_EDGE_RISING, &encISR);
 
-  float del_time = 1000.0/((float)ENC_HZ);
-  float two_pi = 2.0*M_PI;
+  float del_time = 1.0/((float)ENC_HZ);
+  float ppr = 852; // Pulses per revolution at output shaft
+  float coeff = 2.0*M_PI/del_time;
 
   for (;;)
   {
     enc_count = 0;
-    delay(del_time); // Delay in ms between readings
+    delay(1000.0*del_time); // Delay in ms between readings
 
-    ang_vel = two_pi*(((float)enc_count)/24.0)/del_time;
+    ang_vel = coeff*(enc_count/ppr);
     ROS_INFO("Angular velocity: %.2f rad/s.", ang_vel);
+    ROS_INFO("RPM: %.2f", 60.0*(ang_vel/(2.0*M_PI)));
   }
 }
 
@@ -61,9 +63,8 @@ int main(int argc, char **argv)
 
   GamepadInit();
 
-  piThreadCreate (encThread); // Start encoders thread
-
   wiringPiSetup();
+  piThreadCreate (encThread); // Start encoders thread
   pinMode (DIR_PIN, OUTPUT);
   digitalWrite (DIR_PIN, dir);
 
