@@ -7,12 +7,16 @@
 
 #define PIN_BASE 160
 #define MAX_PWM 4096
-#define HERTZ 50
+#define HERTZ 1000
 
+#define DIR_PIN 24
+
+/* ------ FOR 50Hz SERVOS --------
 #define MAX_PULSE 600
 #define MIN_PULSE 150
+*/
 
-#define THRES 0.5
+//#define THRES 0.5
 
 #include "gamepad/gamepad.h"
 
@@ -20,10 +24,14 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "underling");
   ros::NodeHandle n;
-  ros::Rate loop_rate(50); // 50 Hz
+  ros::Rate loop_rate(HERTZ); // 1000 Hz
 
+  /*--------- FIRST TEST, SERVO SWEEP -------------
   bool increasing = true;
   int value = 200;
+  */
+
+  float PWM_val = 0;
 
   int fd = pca9685Setup(PIN_BASE, 0x40, HERTZ);
   if (fd < 0)
@@ -34,15 +42,36 @@ int main(int argc, char **argv)
 
   pca9685PWMReset(fd); // Reset all output
 
+  /* --------- SECOND TEST, ROBOT ARM CONTROLLER -------------
   GamepadInit(); // Initialise the Xbox gamepad
   int mid = MIN_PULSE + (MAX_PULSE - MIN_PULSE);
   int pulse_12 = mid;
   int pulse_13 = mid;
   int pulse_14 = mid;
   int pulse_15 = mid;
+  */
+
+  wiringPiSetup();
+  pinMode (DIR_PIN, OUTPUT);
+  digitalWrite (DIR_PIN, HIGH);
 
   while (ros::ok())
   {
+    GamepadUpdate();
+
+    bool r_trigger = GamepadTriggerDown(GAMEPAD_0, TRIGGER_RIGHT);
+    bool l_trigger = GamepadTriggerDown(GAMEPAD_0, TRIGGER_LEFT);
+  
+    if (r_trigger == true)
+      PWM_val += 0.1;
+    else if (l_trigger == true)
+      PWM_val -= 0.1;
+
+    ROS_INFO_STREAM((int)PWM_val);
+
+    pwmWrite(PIN_BASE + 15, (int)PWM_val);
+
+    /* --------- SECOND TEST, ROBOT ARM CONTROLLER -------------
     GamepadUpdate();
 
     int l_stick_x = 0;
@@ -100,13 +129,13 @@ int main(int argc, char **argv)
     else if (pulse_14 > MAX_PULSE)
       pulse_14 = MAX_PULSE;
 		
-
     pwmWrite(PIN_BASE + 12, pulse_12);
     pwmWrite(PIN_BASE + 13, pulse_13);
     pwmWrite(PIN_BASE + 14, pulse_14);
     pwmWrite(PIN_BASE + 15, pulse_15);
-  
-    /*
+    */
+
+    /*--------- FIRST TEST, SERVO SWEEP -------------
     pwmWrite(PIN_BASE + 4, value);
   
     if (increasing) 
