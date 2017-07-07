@@ -16,13 +16,6 @@
 
 #include "gamepad/gamepad.h"
 
-// Calculate the number of ticks the signal should be high for the required amount of time
-int calcTicks(float impulseMs, int hertz)
-{
-  float cycleMs = 1000.0f / hertz;
-  return (int)(MAX_PWM * impulseMs / cycleMs + 0.5f);
-}
-
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "underling");
@@ -60,32 +53,53 @@ int main(int argc, char **argv)
     GamepadStickXY(GAMEPAD_0, STICK_LEFT, &l_stick_x, &l_stick_y);
     GamepadStickXY(GAMEPAD_0, STICK_RIGHT, &r_stick_x, &r_stick_y);
 
-    float lf_stick_x = ((float) l_stick_x)/32767;
-    float lf_stick_y = ((float) l_stick_y)/32767;
-    float rf_stick_y = ((float) l_stick_y)/32767;
+    float lf_stick_x = -((float) l_stick_x)/32767;
+    float lf_stick_y = -((float) l_stick_y)/32767;
+    float rf_stick_y = ((float) r_stick_y)/32767;
 
     if (lf_stick_x > THRES) // Base
-      pulse_12 += 10;
+      pulse_12 += 5;
     else if (lf_stick_x < -THRES)
-      pulse_12 -= 10;
+      pulse_12 -= 5;
 
     if (lf_stick_y > THRES) // Shoulder
-      pulse_13 += 10;
+      pulse_13 += 5;
     else if (lf_stick_y < -THRES)
-      pulse_13 -= 10;
+      pulse_13 -= 5;
 
     if (rf_stick_y > THRES) // Elbow
-      pulse_14 += 10;
+      pulse_14 += 5;
     else if (rf_stick_y < -THRES)
-      pulse_14 -= 10;
+      pulse_14 -= 5;
 
-    GAMEPAD_BOOL r_trigger = GamepadTriggerDown(GAMEPAD_0, TRIGGER_RIGHT);
-    GAMEPAD_BOOL l_trigger = GamepadTriggerDown(GAMEPAD_0, TRIGGER_LEFT);
+    bool r_trigger = GamepadTriggerDown(GAMEPAD_0, TRIGGER_RIGHT);
+    bool l_trigger = GamepadTriggerDown(GAMEPAD_0, TRIGGER_LEFT);
 
-    if (r_trigger == GAMEPAD_TRUE) // Elbow
-      pulse_15 += 10;
-    else if (l_trigger == GAMEPAD_TRUE)
-      pulse_15 -= 10;
+    if (r_trigger == true) // Wrist
+      pulse_15 += 5;
+    else if (l_trigger == true)
+      pulse_15 -= 5;
+
+    if (pulse_15 < MIN_PULSE)
+      pulse_15 = MIN_PULSE;
+    else if (pulse_15 > MAX_PULSE)
+      pulse_15 = MAX_PULSE;
+
+    if (pulse_12 < MIN_PULSE)
+      pulse_12 = MIN_PULSE;
+    else if (pulse_12 > MAX_PULSE)
+      pulse_12 = MAX_PULSE;
+
+    if (pulse_13 < MIN_PULSE)
+      pulse_13 = MIN_PULSE;
+    else if (pulse_13 > MAX_PULSE)
+      pulse_13 = MAX_PULSE;
+
+    if (pulse_14 < MIN_PULSE)
+      pulse_14 = MIN_PULSE;
+    else if (pulse_14 > MAX_PULSE)
+      pulse_14 = MAX_PULSE;
+		
 
     pwmWrite(PIN_BASE + 12, pulse_12);
     pwmWrite(PIN_BASE + 13, pulse_13);
