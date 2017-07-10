@@ -207,7 +207,11 @@ include_directories(
 include_directories(include ${catkin_INCLUDE_DIRS})
 
 add_executable(underling src/underling.cpp include/pca9685/src/pca9685.c include/gamepad/gamepad.c)
-add_library(gamepad SHARED include/gamepad/gamepad.c)
+
+if (NOT TARGET gamepad)
+  add_library(gamepad SHARED include/gamepad/gamepad.c)
+endif()
+
 target_link_libraries(underling wiringPiPca9685 wiringPi gamepad udev ${catkin_LIBRARIES})
 #add_dependencies(underling rover_generate_messages_cpp)
 
