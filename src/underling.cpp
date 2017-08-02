@@ -19,7 +19,7 @@ using namespace std;
 
 #define INCREMENT 5
 
-#include <mainframe/DriveCommand.h>
+#include <rover/DriveCommand.h>
 
 static volatile int enc_count = 0;
 static volatile float ang_vel = 0;
@@ -32,8 +32,8 @@ int dir[4] = {1}; // Direction of each motor
 int pwm[4] = {0}; // PWM speed value for each motor
 int pwm_des[4] = {0}; // Desired PWM speed values
 
-bool drive_cb(mainframe::DriveCommand::Request  &req,
-         mainframe::DriveCommand::Response &res)
+bool drive_cb(rover::DriveCommand::Request  &req,
+         rover::DriveCommand::Response &res)
 {
   pwm_des[0] = req.f_wheel_l; // Grab wheel PWMs
   pwm_des[1] = req.f_wheel_r;
