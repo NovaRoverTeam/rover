@@ -1,0 +1,13 @@
+#
+# Service format for sending drive commands to rover.
+#
+
+int16 f_wheel_l   # PWM value: max allowed is 4096 (2^12)
+int16 f_wheel_r
+int16 b_wheel_l
+int16 b_wheel_r
+
+---
+
+# No response needed at this stage
+
