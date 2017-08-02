@@ -2,6 +2,9 @@
 #include <ros/console.h>
 #include <math.h>
 
+#include <iostream>
+using namespace std;
+
 #include <wiringPi.h>
 #include <pca9685.h>
 
@@ -9,48 +12,42 @@
 #define MAX_PWM 4096
 #define HERTZ 1000
 
-#define DIR_PIN 24
+#define F_L_DIR_PIN 24 // TODO set these GPIOs
+#define F_R_DIR_PIN 25
+#define B_L_DIR_PIN 26
+#define B_R_DIR_PIN 27
 
-#define ENC_PIN 25
-#define ENC_HZ 10
+#define INCREMENT 5
+
+#include <mainframe/DriveCommand.h>
 
 static volatile int enc_count = 0;
 static volatile float ang_vel = 0;
 
-#include "gamepad/gamepad.h"
+// Format is [f_l, f_r, b_l, b_r]
 
-void encISR() 
+int dir_pins[4] = {F_L_DIR_PIN, F_R_DIR_PIN, B_L_DIR_PIN, B_R_DIR_PIN};
+
+int dir[4] = {1}; // Direction of each motor
+int pwm[4] = {0}; // PWM speed value for each motor
+int pwm_des[4] = {0}; // Desired PWM speed values
+
+bool drive_cb(mainframe::DriveCommand::Request  &req,
+         mainframe::DriveCommand::Response &res)
 {
-  ++enc_count;
-}
+  pwm_des[0] = req.f_wheel_l; // Grab wheel PWMs
+  pwm_des[1] = req.f_wheel_r;
+  pwm_des[2] = req.b_wheel_l;
+  pwm_des[3] = req.b_wheel_r;
 
-PI_THREAD (encThread)
-{
-  wiringPiISR(ENC_PIN, INT_EDGE_RISING, &encISR);
-
-  float del_time = 1.0/((float)ENC_HZ);
-  float ppr = 852; // Pulses per revolution at output shaft
-  float coeff = 2.0*M_PI/del_time;
-
-  for (;;)
-  {
-    enc_count = 0;
-    delay(1000.0*del_time); // Delay in ms between readings
-
-    ang_vel = coeff*(enc_count/ppr);
-    ROS_INFO("Angular velocity: %.2f rad/s.", ang_vel);
-    ROS_INFO("RPM: %.2f", 60.0*(ang_vel/(2.0*M_PI)));
-  }
+  return true;
 }
 
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "underling");
   ros::NodeHandle n;
-  ros::Rate loop_rate(HERTZ); // 1000 Hz
-
-  int PWM_val = 0;
-  bool dir = HIGH;
+  ros::Rate loop_rate(HERTZ);
 
   int fd = pca9685Setup(PIN_BASE, 0x40, HERTZ);
   if (fd < 0)
@@ -61,39 +58,39 @@ int main(int argc, char **argv)
 
   pca9685PWMReset(fd); // Reset all output
 
-  GamepadInit();
-
   wiringPiSetup();
-  piThreadCreate (encThread); // Start encoders thread
-  pinMode (DIR_PIN, OUTPUT);
-  digitalWrite (DIR_PIN, dir);
+
+  for (int i = 0; i < 4; i++) // Configure GPIOs and set init dirs
+  {
+    //pinMode (dir_pins[i], OUTPUT);
+    //digitalWrite (dir_pins[i], dir[i]);
+  }
 
   while (ros::ok())
   {
-    GamepadUpdate();
+    int pwm_dif[4] = {0}; 
+    int dir_tmp[4] = {1};
+    int incr[4] = {INCREMENT};
 
-    bool r_trigger = GamepadTriggerDown(GAMEPAD_0, TRIGGER_RIGHT);
-    bool l_trigger = GamepadTriggerDown(GAMEPAD_0, TRIGGER_LEFT);
-  
-    bool a_but = GamepadButtonTriggered(GAMEPAD_0, BUTTON_A);
-
-    if (r_trigger == true)
-      PWM_val += 1;
-    else if (l_trigger == true)
-      PWM_val -= 1;
-
-    if (PWM_val < 0) PWM_val = 0;
-    else if (PWM_val > MAX_PWM) PWM_val = MAX_PWM;
-
-    if ((a_but == true) && (PWM_val == 0))
+    for (int i = 0; i < 4; i++)
     {
-      dir = !dir;
-      digitalWrite (DIR_PIN, dir);
+      pwm_dif[i] = pwm_des[i] - pwm[i]; // Diff between cur and des
+
+      if (pwm_dif[i] < 0) dir_tmp[i] = -1; // Dir to increment in
+
+      if (abs(pwm_dif[i]) < 2*INCREMENT) incr[i] = 1; // How much change
+
+      pwm[i] = dir_tmp[i]*incr[i]; // Move pwm vals closer to des
+
+      if (pwm[i] < 0) dir[i] = -1; // Set new motor directions
+      else dir[i] = 1;
+
+      // ***************** CHANGE OUTPUTS *********************
+      //digitalWrite (dir_pins[i], dir[i]);
+      //pwmWrite(PIN_BASE + i, pwm[i]); // pins of pwm board, (0, 1, 2, 3)
+      cout << "direction " << i << " is " << dir[i] << endl;
+      cout << "pwm " << i << " is " << pwm[i] << endl << endl;
     }
-
-    //ROS_INFO_STREAM(PWM_val);
-
-    pwmWrite(PIN_BASE + 15, PWM_val);
 
     ros::spinOnce();
     loop_rate.sleep();
@@ -101,105 +98,4 @@ int main(int argc, char **argv)
 
   return 0;
 }
- 
-  /* ------ FOR 50Hz SERVOS --------
-  #define MAX_PULSE 600
-  #define MIN_PULSE 150
-  */
-
-  //#define THRES 0.5
-
-  /*--------- FIRST TEST, SERVO SWEEP -------------
-  bool increasing = true;
-  int value = 200;
-  */
-
-  /* --------- SECOND TEST, ROBOT ARM CONTROLLER -------------
-  GamepadInit(); // Initialise the Xbox gamepad
-  int mid = MIN_PULSE + (MAX_PULSE - MIN_PULSE);
-  int pulse_12 = mid;
-  int pulse_13 = mid;
-  int pulse_14 = mid;
-  int pulse_15 = mid;
-  */
-
-    /* --------- SECOND TEST, ROBOT ARM CONTROLLER -------------
-    GamepadUpdate();
-
-    int l_stick_x = 0;
-    int l_stick_y = 0;
-    int r_stick_x = 0;
-    int r_stick_y = 0;    
-
-    GamepadStickXY(GAMEPAD_0, STICK_LEFT, &l_stick_x, &l_stick_y);
-    GamepadStickXY(GAMEPAD_0, STICK_RIGHT, &r_stick_x, &r_stick_y);
-
-    float lf_stick_x = -((float) l_stick_x)/32767;
-    float lf_stick_y = -((float) l_stick_y)/32767;
-    float rf_stick_y = ((float) r_stick_y)/32767;
-
-    if (lf_stick_x > THRES) // Base
-      pulse_12 += 5;
-    else if (lf_stick_x < -THRES)
-      pulse_12 -= 5;
-
-    if (lf_stick_y > THRES) // Shoulder
-      pulse_13 += 5;
-    else if (lf_stick_y < -THRES)
-      pulse_13 -= 5;
-
-    if (rf_stick_y > THRES) // Elbow
-      pulse_14 += 5;
-    else if (rf_stick_y < -THRES)
-      pulse_14 -= 5;
-
-    bool r_trigger = GamepadTriggerDown(GAMEPAD_0, TRIGGER_RIGHT);
-    bool l_trigger = GamepadTriggerDown(GAMEPAD_0, TRIGGER_LEFT);
-
-    if (r_trigger == true) // Wrist
-      pulse_15 += 5;
-    else if (l_trigger == true)
-      pulse_15 -= 5;
-
-    if (pulse_15 < MIN_PULSE)
-      pulse_15 = MIN_PULSE;
-    else if (pulse_15 > MAX_PULSE)
-      pulse_15 = MAX_PULSE;
-
-    if (pulse_12 < MIN_PULSE)
-      pulse_12 = MIN_PULSE;
-    else if (pulse_12 > MAX_PULSE)
-      pulse_12 = MAX_PULSE;
-
-    if (pulse_13 < MIN_PULSE)
-      pulse_13 = MIN_PULSE;
-    else if (pulse_13 > MAX_PULSE)
-      pulse_13 = MAX_PULSE;
-
-    if (pulse_14 < MIN_PULSE)
-      pulse_14 = MIN_PULSE;
-    else if (pulse_14 > MAX_PULSE)
-      pulse_14 = MAX_PULSE;
-		
-    pwmWrite(PIN_BASE + 12, pulse_12);
-    pwmWrite(PIN_BASE + 13, pulse_13);
-    pwmWrite(PIN_BASE + 14, pulse_14);
-    pwmWrite(PIN_BASE + 15, pulse_15);
-    */
-
-    /*--------- FIRST TEST, SERVO SWEEP -------------
-    pwmWrite(PIN_BASE + 4, value);
-  
-    if (increasing) 
-      value += 1;
-    else
-      value -= 1;
-    
-    if (value > 400)
-      increasing = false;
-    else if (value < 200)
-      increasing = true;
-	
-    ROS_INFO_STREAM(value);
-    */
 

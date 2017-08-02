@@ -11,8 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-  geometry_msgs
-  #gazebo_msgs
+  mainframe
   message_generation
 )
 
@@ -74,8 +73,6 @@ add_message_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
-  geometry_msgs
-  #gazebo_msgs  
 )
 
 ################################################
@@ -206,13 +203,21 @@ include_directories(
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_executable(underling src/underling.cpp include/pca9685/src/pca9685.c include/gamepad/gamepad.c)
+add_executable(underling src/underling.cpp include/pca9685/src/pca9685.c)
 
-if (NOT TARGET gamepad)
-  add_library(gamepad SHARED include/gamepad/gamepad.c)
-endif()
+#add_executable(underling src/underling.cpp include/pca9685/src/pca9685.c include/gamepad/gamepad.c)
 
-target_link_libraries(underling wiringPiPca9685 wiringPi gamepad udev ${catkin_LIBRARIES})
-#add_dependencies(underling rover_generate_messages_cpp)
+add_dependencies(underling ${catkin_EXPORTED_TARGETS})
+target_link_libraries(underling ${catkin_LIBRARIES})
+
+# ******** HANDY FOR DEALING WITH CLASHES *************
+#if (NOT TARGET gamepad)
+#  add_library(gamepad SHARED include/gamepad/gamepad.c)
+#endif()
+
+target_link_libraries(underling wiringPiPca9685 wiringPi ${catkin_LIBRARIES})
+
+# target_link_libraries(underling wiringPiPca9685 wiringPi gamepad udev ${catkin_LIBRARIES})
+# add_dependencies(underling rover_generate_messages_cpp)
 
 
