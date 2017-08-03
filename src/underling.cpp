@@ -118,9 +118,9 @@ int main(int argc, char **argv)
 
       // ***************** CHANGE OUTPUTS *********************
       //digitalWrite (dir_pins[i], dir[i]);
-      //pwmWrite(PIN_BASE + i, pwm[i]); // pins of pwm board, (0, 1, 2, 3)
+      //pwmWrite(PIN_BASE + i, abs(pwm[i])); // pins of pwm board, (0, 1, 2, 3)
       cout << "drv dir " << i << " is " << dir[i] << endl;
-      cout << "drv pwm " << i << " is " << pwm[i] << endl << endl;
+      cout << "drv pwm " << i << " is " << abs(pwm[i]) << endl << endl;
     }
 
     cout << "str dir is " << steer_dir << endl;
