@@ -17,8 +17,10 @@ using namespace std;
 #define B_L_DIR_PIN 26
 #define B_R_DIR_PIN 27
 
+#define F_STR_PIN 28
+#define B_STR_PIN 29
+
 #define DRV_INCR 50
-#define STR_INCR 50
 
 #include <rover/DriveCommand.h>
 #include <rover/SteerCommand.h>
@@ -34,9 +36,10 @@ int dir[4] = {1}; // Direction of each motor
 int pwm[4] = {0}; // PWM speed value for each motor
 int pwm_des[4] = {0}; // Desired PWM speed values
 
-int steer_dir = 0;
-int steer_pwm_f = MAX_PWM/2;
-int steer_pwm_b = MAX_PWM/2;
+bool do_steer = false;
+int steer_dir = 1;
+int steer_pwm = MAX_PWM/2;
+int single = 1;
 
 // TODO RANGE CHECKS *****TODO*****TODO******************
 
@@ -57,13 +60,18 @@ bool drive_cb(rover::DriveCommand::Request  &req,
 bool steer_cb(rover::SteerCommand::Request  &req,
          rover::SteerCommand::Response &res)
 {
+  do_steer = req.start;
   bool steer_left = req.steer_left; // Grab steer direction
 
   if (steer_left) steer_dir = -1;
   else steer_dir = 1;
 
-  cout << "STEER SERVICE HAS BEEN CALLED - WOWZERS" << endl;
-  //cout << pwm_des[0] << " " << pwm_des[1] << " " << pwm_des[2] << " " << pwm_des[3] << endl;
+  if (req.single == true)
+    single = 0;
+  else
+    single = 1;
+
+  //cout << "STEER SERVICE HAS BEEN CALLED - WOWZERS" << endl;
 
   return true;
 }
@@ -122,28 +130,25 @@ int main(int argc, char **argv)
       cout << "drv dir " << i << " is " << dir[i] << endl;
       cout << "drv pwm " << i << " is " << abs(pwm[i]) << endl << endl;
     }
-
-    cout << "str dir is " << steer_dir << endl;
-
-    if (steer_dir != 0) // Adjust steering if necessary
+    
+    if (do_steer) // Adjust steering if necessary
     {
-      steer_pwm_f += steer_dir*STR_INCR;
-      steer_pwm_b -= steer_dir*STR_INCR;
+      //digitalWrite (F_STR_PIN, steer_dir);
+      //digitalWrite (B_STR_PIN, -steer_dir);
 
-      steer_dir = 0; // Reset
+      //pwmWrite(PIN_BASE + 5, steer_pwm); // pins of pwm board, (5, 6 for steering)
+      //pwmWrite(PIN_BASE + 6, single*steer_pwm);
+
+      cout << "do steer is " << do_steer << endl << endl;
+      cout << "single is " << single << endl << endl;
+      cout << "str dir front is " << steer_dir << endl << endl;
+      cout << "str dir back is " << -steer_dir << endl << endl;
     }
-
-    // Validate PWM values
-    if (steer_pwm_f > MAX_PWM) steer_pwm_f = MAX_PWM;
-    else if (steer_pwm_f < 0) steer_pwm_f = 0;
-    if (steer_pwm_b > MAX_PWM) steer_pwm_b = MAX_PWM;
-    else if (steer_pwm_b < 0) steer_pwm_b = 0;
-
-    //pwmWrite(PIN_BASE + 5, steer_pwm_f); // pins of pwm board, (5, 6 for steering)
-    //pwmWrite(PIN_BASE + 6, steer_pwm_b);
-
-    cout << "str pwm front is " << steer_pwm_f << endl << endl;
-    cout << "str pwm back is " << steer_pwm_b << endl << endl;
+    else 
+    {
+      //pwmWrite(PIN_BASE + 5, 0); // Stop!
+      //pwmWrite(PIN_BASE + 6, 0);
+    }
 
     ros::spinOnce();
     loop_rate.sleep();

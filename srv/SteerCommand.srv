@@ -2,6 +2,8 @@
 # Service format for sending steering commands to rover.
 #
 
+bool single       # Control single set of wheels
+bool start        # Starting or stopping steering?
 bool steer_left   # PWM value: max allowed is 4096 (2^12)
 
 ---
