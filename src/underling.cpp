@@ -10,14 +10,14 @@ using namespace std;
 
 #define PIN_BASE 160
 #define MAX_PWM 4096
-#define HERTZ 1000
+#define HERTZ 10
 
 #define F_L_DIR_PIN 24 // TODO set these GPIOs
 #define F_R_DIR_PIN 25
 #define B_L_DIR_PIN 26
 #define B_R_DIR_PIN 27
 
-#define INCREMENT 5
+#define INCREMENT 50
 
 #include <rover/DriveCommand.h>
 
@@ -40,6 +40,9 @@ bool drive_cb(rover::DriveCommand::Request  &req,
   pwm_des[2] = req.b_wheel_l;
   pwm_des[3] = req.b_wheel_r;
 
+  //cout << "SERVICE HAS BEEN CALLED - WOWZERS" << endl;
+  //cout << pwm_des[0] << " " << pwm_des[1] << " " << pwm_des[2] << " " << pwm_des[3] << endl;
+
   return true;
 }
 
@@ -48,6 +51,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "underling");
   ros::NodeHandle n;
   ros::Rate loop_rate(HERTZ);
+  ros::ServiceServer service = n.advertiseService("/DriveCommand", drive_cb);	
 
   int fd = pca9685Setup(PIN_BASE, 0x40, HERTZ);
   if (fd < 0)
@@ -68,19 +72,27 @@ int main(int argc, char **argv)
 
   while (ros::ok())
   {
-    int pwm_dif[4] = {0}; 
-    int dir_tmp[4] = {1};
-    int incr[4] = {INCREMENT};
+    int pwm_dif[4] = {0, 0, 0, 0}; 
+    int dir_tmp[4] = {1, 1, 1, 1};
+    int incr[4] = {INCREMENT, INCREMENT, INCREMENT, INCREMENT};
 
     for (int i = 0; i < 4; i++)
     {
-      pwm_dif[i] = pwm_des[i] - pwm[i]; // Diff between cur and des
+      cout << "incr " << i << " is " << incr[i] << endl;
 
+      pwm_dif[i] = pwm_des[i] - pwm[i]; // Diff between cur and des
+      cout << "pwm_dif " << i << " is " << pwm_dif[i] << endl;
+      cout << "pwm_des " << i << " is " << pwm_des[i] << endl;
+      cout << "pwm " << i << " is " << pwm[i] << endl;
+      
       if (pwm_dif[i] < 0) dir_tmp[i] = -1; // Dir to increment in
 
       if (abs(pwm_dif[i]) < 2*INCREMENT) incr[i] = 1; // How much change
 
-      pwm[i] = dir_tmp[i]*incr[i]; // Move pwm vals closer to des
+      cout << "incr " << i << " is " << incr[i] << endl;
+
+
+      pwm[i] = pwm[i] + dir_tmp[i]*incr[i]; // Move pwm vals closer to des
 
       if (pwm[i] < 0) dir[i] = -1; // Set new motor directions
       else dir[i] = 1;
@@ -98,4 +110,5 @@ int main(int argc, char **argv)
 
   return 0;
 }
+
 
