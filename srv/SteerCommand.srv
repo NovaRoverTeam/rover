@@ -1,0 +1,10 @@
+#
+# Service format for sending steering commands to rover.
+#
+
+bool steer_left   # PWM value: max allowed is 4096 (2^12)
+
+---
+
+# No response needed at this stage
+
