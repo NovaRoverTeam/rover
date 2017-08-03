@@ -74,7 +74,10 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "underling");
   ros::NodeHandle n;
   ros::Rate loop_rate(HERTZ);
-  ros::ServiceServer service = n.advertiseService("/DriveCommand", drive_cb);	
+
+  ros::ServiceServer drv_service = n.advertiseService("/DriveCommand", drive_cb);	
+  ros::ServiceServer str_service = n.advertiseService("/SteerCommand", steer_cb);	
+
 
   int fd = pca9685Setup(PIN_BASE, 0x40, HERTZ);
   if (fd < 0)
