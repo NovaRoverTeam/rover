@@ -12,13 +12,13 @@ using namespace std;
 #define MAX_PWM 4096
 #define HERTZ 10
 
-#define F_L_DIR_PIN 24 // TODO set these GPIOs
-#define F_R_DIR_PIN 25
-#define B_L_DIR_PIN 26
-#define B_R_DIR_PIN 27
+#define F_L_DIR_PIN 23 // TODO set these GPIOs
+#define F_R_DIR_PIN 24
+#define B_L_DIR_PIN 13
+#define B_R_DIR_PIN 19
 
-#define F_STR_PIN 28
-#define B_STR_PIN 29
+#define F_STR_PIN 16
+#define B_STR_PIN 20
 
 #define DRV_INCR 50
 
@@ -71,6 +71,7 @@ bool steer_cb(rover::SteerCommand::Request  &req,
   else
     single = 1;
 
+  cout << "do_steer is " << do_steer << endl;
   cout << "single is " << single << endl << endl;
 
   //cout << "STEER SERVICE HAS BEEN CALLED - WOWZERS" << endl;
@@ -136,8 +137,8 @@ int main(int argc, char **argv)
       //digitalWrite (F_STR_PIN, steer_dir);
       //digitalWrite (B_STR_PIN, -steer_dir);
 
-      //pwmWrite(PIN_BASE + 5, steer_pwm); // pins of pwm board, (5, 6 for steering)
-      //pwmWrite(PIN_BASE + 6, single*steer_pwm);
+      //pwmWrite(PIN_BASE + 4, steer_pwm); // pins of pwm board, (4, 5 for steering)
+      //pwmWrite(PIN_BASE + 5, single*steer_pwm);
 
       cout << "do steer is " << do_steer << endl << endl;
       cout << "single is " << single << endl << endl;
