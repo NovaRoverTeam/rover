@@ -39,7 +39,7 @@ int pwm_des[4] = {0}; // Desired PWM speed values
 bool do_steer = false;
 int steer_dir = 1;
 int steer_pwm = MAX_PWM/2;
-int single = 1;
+int single = 1; // 1 means not single, 0 means single
 
 // TODO RANGE CHECKS *****TODO*****TODO******************
 
