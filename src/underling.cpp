@@ -71,6 +71,8 @@ bool steer_cb(rover::SteerCommand::Request  &req,
   else
     single = 1;
 
+  cout << "single is " << single << endl << endl;
+
   //cout << "STEER SERVICE HAS BEEN CALLED - WOWZERS" << endl;
 
   return true;
