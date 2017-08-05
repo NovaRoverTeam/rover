@@ -46,7 +46,7 @@ int single = 1; // 1 means not single, 0 means single
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "underling");
+  ros::init(argc, argv, "debug");
   ros::NodeHandle n;
   ros::Rate loop_rate(HERTZ);
 
