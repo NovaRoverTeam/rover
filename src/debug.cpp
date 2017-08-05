@@ -10,9 +10,9 @@ using namespace std;
 
 #define PIN_BASE 160
 #define MAX_PWM 4096
-#define HERTZ 10
+#define HERTZ 2
 
-#define F_L_DIR_PIN 23 // TODO set these GPIOs
+#define F_L_DIR_PIN 23
 #define F_R_DIR_PIN 24
 #define B_L_DIR_PIN 13
 #define B_R_DIR_PIN 19
@@ -20,7 +20,7 @@ using namespace std;
 #define F_STR_PIN 16
 #define B_STR_PIN 20
 
-#define DRV_INCR 50
+#define DRV_INCR 100
 
 #include <rover/DriveCommand.h>
 #include <rover/SteerCommand.h>
@@ -32,9 +32,10 @@ static volatile float ang_vel = 0;
 
 int dir_pins[4] = {F_L_DIR_PIN, F_R_DIR_PIN, B_L_DIR_PIN, B_R_DIR_PIN};
 
-int dir[4] = {1}; // Direction of each motor
-int pwm[4] = {0}; // PWM speed value for each motor
-int pwm_des[4] = {0}; // Desired PWM speed values
+int dir[4] = {1, 1, 1, 1}; // Direction of each motor
+int pwm[4] = {0, 0, 0, 0}; // PWM speed value for each motor
+int pwm_des[4] = {1000, 1000, 1000, 1000}; // Desired PWM speed values
+int correction = {1, -1, 1, -1}; // Correct motor directions
 
 bool do_steer = false;
 int steer_dir = 1;
@@ -43,52 +44,11 @@ int single = 1; // 1 means not single, 0 means single
 
 // TODO RANGE CHECKS *****TODO*****TODO******************
 
-bool drive_cb(rover::DriveCommand::Request  &req,
-         rover::DriveCommand::Response &res)
-{
-  pwm_des[0] = req.f_wheel_l; // Grab wheel PWMs
-  pwm_des[1] = req.f_wheel_r;
-  pwm_des[2] = req.b_wheel_l;
-  pwm_des[3] = req.b_wheel_r;
-
-  //cout << "SERVICE HAS BEEN CALLED - WOWZERS" << endl;
-  //cout << pwm_des[0] << " " << pwm_des[1] << " " << pwm_des[2] << " " << pwm_des[3] << endl;
-
-  return true;
-}
-
-bool steer_cb(rover::SteerCommand::Request  &req,
-         rover::SteerCommand::Response &res)
-{
-  do_steer = req.start;
-  bool steer_left = req.steer_left; // Grab steer direction
-
-  if (steer_left) steer_dir = -1;
-  else steer_dir = 1;
-
-  if (req.single == true)
-    single = 0;
-  else
-    single = 1;
-
-  cout << "do_steer is " << do_steer << endl;
-  cout << "single is " << single << endl << endl;
-
-  //cout << "STEER SERVICE HAS BEEN CALLED - WOWZERS" << endl;
-
-  return true;
-}
-
-
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "underling");
+  ros::init(argc, argv, "debug");
   ros::NodeHandle n;
   ros::Rate loop_rate(HERTZ);
-
-  ros::ServiceServer drv_service = n.advertiseService("/DriveCommand", drive_cb);	
-  ros::ServiceServer str_service = n.advertiseService("/SteerCommand", steer_cb);	
-
 
   int fd = pca9685Setup(PIN_BASE, 0x40, HERTZ);
   if (fd < 0)
@@ -106,6 +66,11 @@ int main(int argc, char **argv)
     pinMode (dir_pins[i], OUTPUT);
     digitalWrite (dir_pins[i], dir[i]);
   }
+
+  pinMode (F_STR_PIN, OUTPUT);
+  pinMode (B_STR_PIN, OUTPUT);
+  digitalWrite (F_STR_PIN, steer_dir);
+  digitalWrite (B_STR_PIN, -steer_dir);
 
   while (ros::ok())
   {
@@ -126,18 +91,19 @@ int main(int argc, char **argv)
       else dir[i] = 1;
 
       // ***************** CHANGE OUTPUTS *********************
-      digitalWrite (dir_pins[i], dir[i]);
+      digitalWrite (dir_pins[i], correction[i]*dir[i]);
       pwmWrite(PIN_BASE + i, abs(pwm[i])); // pins of pwm board, (0, 1, 2, 3)
-      //cout << "drv dir " << i << " is " << dir[i] << endl;
-      //cout << "drv pwm " << i << " is " << abs(pwm[i]) << endl << endl;
+      cout << "drv dir " << i << " is " << correction[i]*dir[i] << endl;
+      cout << "drv pwm " << i << " is " << abs(pwm[i]) << endl << endl;
     }
     
+    /*
     if (do_steer) // Adjust steering if necessary
     {
       digitalWrite (F_STR_PIN, steer_dir);
       digitalWrite (B_STR_PIN, -steer_dir);
 
-      pwmWrite(PIN_BASE + 4, steer_pwm); // pins of pwm board, (4, 5 for steering)
+      pwmWrite(PIN_BASE + 4, steer_pwm); // pwm pins (4, 5)
       pwmWrite(PIN_BASE + 5, single*steer_pwm);
 
       cout << "do steer is " << do_steer << endl << endl;
@@ -146,10 +112,10 @@ int main(int argc, char **argv)
       cout << "str dir back is " << -steer_dir << endl << endl;
     }
     else 
-    {
-      pwmWrite(PIN_BASE + 5, 0); // Stop!
-      pwmWrite(PIN_BASE + 6, 0);
-    }
+    {*/
+      pwmWrite(PIN_BASE + 4, 0); // Stop!
+      pwmWrite(PIN_BASE + 5, 0);
+    //}
 
     ros::spinOnce();
     loop_rate.sleep();

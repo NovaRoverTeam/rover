@@ -204,10 +204,15 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 
 add_executable(underling src/underling.cpp include/pca9685/src/pca9685.c)
 
+add_executable(debug src/debug.cpp include/pca9685/src/pca9685.c)
+
 #add_executable(underling src/underling.cpp include/pca9685/src/pca9685.c include/gamepad/gamepad.c)
 
 add_dependencies(underling ${catkin_EXPORTED_TARGETS})
 target_link_libraries(underling ${catkin_LIBRARIES})
+
+add_dependencies(debug ${catkin_EXPORTED_TARGETS})
+target_link_libraries(debug ${catkin_LIBRARIES})
 
 # ******** HANDY FOR DEALING WITH CLASHES *************
 #if (NOT TARGET gamepad)
@@ -215,6 +220,8 @@ target_link_libraries(underling ${catkin_LIBRARIES})
 #endif()
 
 target_link_libraries(underling wiringPiPca9685 wiringPi ${catkin_LIBRARIES})
+
+target_link_libraries(debug wiringPiPca9685 wiringPi ${catkin_LIBRARIES})
 
 # target_link_libraries(underling wiringPiPca9685 wiringPi gamepad udev ${catkin_LIBRARIES})
 # add_dependencies(underling rover_generate_messages_cpp)
