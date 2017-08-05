@@ -103,8 +103,8 @@ int main(int argc, char **argv)
 
   for (int i = 0; i < 4; i++) // Configure GPIOs and set init dirs
   {
-    //pinMode (dir_pins[i], OUTPUT);
-    //digitalWrite (dir_pins[i], dir[i]);
+    pinMode (dir_pins[i], OUTPUT);
+    digitalWrite (dir_pins[i], dir[i]);
   }
 
   while (ros::ok())
@@ -126,19 +126,19 @@ int main(int argc, char **argv)
       else dir[i] = 1;
 
       // ***************** CHANGE OUTPUTS *********************
-      //digitalWrite (dir_pins[i], dir[i]);
-      //pwmWrite(PIN_BASE + i, abs(pwm[i])); // pins of pwm board, (0, 1, 2, 3)
+      digitalWrite (dir_pins[i], dir[i]);
+      pwmWrite(PIN_BASE + i, abs(pwm[i])); // pins of pwm board, (0, 1, 2, 3)
       //cout << "drv dir " << i << " is " << dir[i] << endl;
       //cout << "drv pwm " << i << " is " << abs(pwm[i]) << endl << endl;
     }
     
     if (do_steer) // Adjust steering if necessary
     {
-      //digitalWrite (F_STR_PIN, steer_dir);
-      //digitalWrite (B_STR_PIN, -steer_dir);
+      digitalWrite (F_STR_PIN, steer_dir);
+      digitalWrite (B_STR_PIN, -steer_dir);
 
-      //pwmWrite(PIN_BASE + 4, steer_pwm); // pins of pwm board, (4, 5 for steering)
-      //pwmWrite(PIN_BASE + 5, single*steer_pwm);
+      pwmWrite(PIN_BASE + 4, steer_pwm); // pins of pwm board, (4, 5 for steering)
+      pwmWrite(PIN_BASE + 5, single*steer_pwm);
 
       cout << "do steer is " << do_steer << endl << endl;
       cout << "single is " << single << endl << endl;
@@ -147,8 +147,8 @@ int main(int argc, char **argv)
     }
     else 
     {
-      //pwmWrite(PIN_BASE + 5, 0); // Stop!
-      //pwmWrite(PIN_BASE + 6, 0);
+      pwmWrite(PIN_BASE + 5, 0); // Stop!
+      pwmWrite(PIN_BASE + 6, 0);
     }
 
     ros::spinOnce();
