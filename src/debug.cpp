@@ -35,7 +35,11 @@ int dir_pins[4] = {F_L_DIR_PIN, F_R_DIR_PIN, B_L_DIR_PIN, B_R_DIR_PIN};
 int dir[4] = {1, 1, 1, 1}; // Direction of each motor
 int pwm[4] = {0, 0, 0, 0}; // PWM speed value for each motor
 int pwm_des[4] = {1000, 1000, 1000, 1000}; // Desired PWM speed values
+<<<<<<< HEAD
 int correction[4] = {0, 1, 0, 1}; // Correct motor directions
+=======
+int correction[4] = {1, -1, 1, -1}; // Correct motor directions
+>>>>>>> 94379aea5412d8f12d932d784fd4611452bdfbf8
 
 bool do_steer = true;
 bool steer_dir = 0;

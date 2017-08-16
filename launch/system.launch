@@ -1,0 +1,7 @@
+<launch>
+
+  <include file="$(find comms)/launch/rover_comms.launch"/>
+
+  <node name="underling" pkg="rover" type="underling" output="screen" />
+  
+</launch>
