@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(rover)
 
 ## Add support for C++11, supported in ROS Kinetic and newer
-add_definitions(-std=c++11 -lwiringPi)
+add_definitions(-lwiringPi)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -50,6 +50,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
+  DriveCmd.msg
   #RawControl.msg
   #Command.msg
 )
@@ -203,21 +204,21 @@ include_directories(
 include_directories(include ${catkin_INCLUDE_DIRS})
 
 
+#add_executable(underling src/underling.cpp include/pca9685/src/pca9685.c)
+#add_executable(debug src/debug.cpp include/pca9685/src/pca9685.c)
+#add_executable(arm src/arm.cpp include/pca9685/src/pca9685.c)
 
 
-add_executable(underling src/underling.cpp include/pca9685/src/pca9685.c)
+add_executable(underling src/underling_simple.cpp include/pca9685/src/pca9685.c)
 
-add_executable(debug src/debug.cpp include/pca9685/src/pca9685.c)
-
-add_executable(arm src/arm.cpp include/pca9685/src/pca9685.c)
-
+#add_executable(debug src/debug.cpp)
+#add_executable(arm src/arm.cpp)
 
 
 add_dependencies(underling ${catkin_EXPORTED_TARGETS})
 
-add_dependencies(arm ${catkin_EXPORTED_TARGETS})
-
-add_dependencies(debug ${catkin_EXPORTED_TARGETS})
+#add_dependencies(arm ${catkin_EXPORTED_TARGETS})
+#add_dependencies(debug ${catkin_EXPORTED_TARGETS})
 
 # ******** HANDY FOR DEALING WITH CLASHES *************
 if (NOT TARGET gamepad)
@@ -225,12 +226,11 @@ if (NOT TARGET gamepad)
 endif()
 
 
+target_link_libraries(underling wiringPi wiringPiPca9685   ${catkin_LIBRARIES})
 
-target_link_libraries(underling wiringPiPca9685 wiringPi ${catkin_LIBRARIES})
+#target_link_libraries(debug wiringPi wiringPiPca9685 ${catkin_LIBRARIES})
 
-target_link_libraries(debug wiringPiPca9685 wiringPi ${catkin_LIBRARIES})
-
-target_link_libraries(arm wiringPiPca9685 wiringPi gamepad udev ${catkin_LIBRARIES})
+#target_link_libraries(arm wiringPi wiringPiPca9685 udev gamepad ${catkin_LIBRARIES})
 
 # add_dependencies(underling rover_generate_messages_cpp)
 
