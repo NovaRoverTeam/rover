@@ -56,11 +56,11 @@ add_message_files(
 )
 
 ## Generate services in the 'srv' folder
- add_service_files(
-   FILES
-   DriveCommand.srv
-   SteerCommand.srv
- )
+# add_service_files(
+#   FILES
+#   DriveCommand.srv
+#   SteerCommand.srv
+# )
 
 ## Generate actions in the 'action' folder
 # add_action_files(
