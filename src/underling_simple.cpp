@@ -77,7 +77,7 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
   ros::Rate loop_rate(LOOP_HERTZ);
 
-  ros::Subscriber drivecmd_sub = n.subscribe("/mainframe/cmd_data", 10, cmd_data_cb);	
+  ros::Subscriber drivecmd_sub = n.subscribe("/mainframe/cmd_data", 5, cmd_data_cb);	
   ros::Subscriber hbeat_sub = n.subscribe("hbeat", 1, hbeat_cb);	
 
   // If no heartbeat for 2 seconds, rover dies
@@ -137,15 +137,15 @@ int main(int argc, char **argv)
 
     if (alive)
     {
-      // Map drive percentage to PWM as a quadratic
-      drive_pwm = MAX_PWM*pow(drive_pcnt/100, 2);
+      // Map drive percentage to PWM as a quadratic, with limit
+      drive_pwm = 0.3*MAX_PWM*pow(drive_pcnt/100, 2);
 
       // Make sure the PWM val hasn't gone outside range somehow
       drive_pwm = clamp(drive_pwm, MAX_PWM, -MAX_PWM);
 
 
-      // Map steering percentage to PWM as a quadratic, with 30% limit
-      steer_pwm = 0.3*MAX_PWM*pow(steer_pcnt/100, 2);
+      // Map steering percentage to PWM as a quadratic, with limit
+      steer_pwm = 0.6*MAX_PWM*pow(steer_pcnt/100, 2);
 
       // Make sure the PWM val hasn't gone outside range somehow
       steer_pwm = clamp(steer_pwm, MAX_PWM, -MAX_PWM);
