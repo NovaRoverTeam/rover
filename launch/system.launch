@@ -1,7 +1,10 @@
 <launch>
 
+  <arg name="lim_drive" default="0.3"/>
+  <arg name="lim_steer" default="0.5"/>
+
   <include file="$(find comms)/launch/rover_comms.launch"/>
 
-  <node name="underling" pkg="rover" type="underling" output="screen" />
+  <node name="underling" pkg="rover" type="underling" output="screen" args="$(arg lim_drive) $(arg lim_steer)"/>
   
 </launch>

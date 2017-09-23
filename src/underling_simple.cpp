@@ -1,6 +1,7 @@
 #include "ros/ros.h"
 #include <ros/console.h>
 #include <math.h>
+#include <stdlib.h>
 
 #include <iostream>
 using namespace std;
@@ -95,6 +96,15 @@ int main(int argc, char **argv)
   bool drive_dir = 1; // Wheel direction
   bool steer_dir = 1; // Steering direction
 
+  float limit_drive = 0.3;
+  float limit_steer = 0.5;
+
+  if (argc == 3)
+  {
+    limit_drive = atof(argv[1]);
+    limit_steer = atof(argv[2]);
+  }
+
   // ******************** SETUP ************************ //
 
   int fd = pca9685Setup(PIN_BASE, 0x40, PWM_HERTZ);
@@ -138,14 +148,14 @@ int main(int argc, char **argv)
     if (alive)
     {
       // Map drive percentage to PWM as a quadratic, with limit
-      drive_pwm = 0.3*MAX_PWM*pow(drive_pcnt/100, 2);
+      drive_pwm = limit_drive*MAX_PWM*pow(drive_pcnt/100, 2);
 
       // Make sure the PWM val hasn't gone outside range somehow
       drive_pwm = clamp(drive_pwm, MAX_PWM, -MAX_PWM);
 
 
       // Map steering percentage to PWM as a quadratic, with limit
-      steer_pwm = 0.6*MAX_PWM*pow(steer_pcnt/100, 2);
+      steer_pwm = limit_steer*MAX_PWM*pow(steer_pcnt/100, 2);
 
       // Make sure the PWM val hasn't gone outside range somehow
       steer_pwm = clamp(steer_pwm, MAX_PWM, -MAX_PWM);
