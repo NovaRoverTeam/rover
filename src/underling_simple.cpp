@@ -13,6 +13,7 @@ using namespace std;
 #define PIN_BASE 160
 #define MAX_PWM 4096
 #define PWM_HERTZ 1000
+#define MAX_RPM 118 // max RPM of servos from data sheet
 
 #define LOOP_HERTZ 10 // Main control loop rate
 
@@ -33,6 +34,8 @@ float steer_pcnt = 0; // Desired steering speed percentage
 
 bool alive = false; // True if we have contact with mainframe
 int hbeat_cnt = 0; // Counter of how many loops have passed since heartbeat
+int req_drive_RPM = 0;
+int req_steer_RPM = 0;
 
 // Clamp value within range - convenience function
 int clamp(int value, int max, int min)
@@ -58,6 +61,7 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
     {
       drive_pcnt = msg->acc;        // Store desired angular acceleration as %
       steer_pcnt = 100.0*(msg->steer)/45; // Store desired steering angle as %
+      req_drive_RPM = (drive_pcnt/100)*MAX_RPM; // Convert % -> RPM for PID calculations
 
       ROS_INFO_STREAM("Drive command received.");
     }
@@ -147,6 +151,7 @@ int main(int argc, char **argv)
 
     if (alive)
     {
+
       // Map drive percentage to PWM as a quadratic, with limit
       drive_pwm = limit_drive*MAX_PWM*pow(drive_pcnt/100, 2);
 
