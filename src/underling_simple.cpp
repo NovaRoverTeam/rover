@@ -10,6 +10,10 @@ using namespace std;
 #include <pca9685.h>
 //#include <miniPID.h>
 
+#define K_P 5
+#define K_I 0
+#define K_D 0
+
 #define PIN_BASE 160
 #define MAX_PWM 4096
 #define PWM_HERTZ 1000
@@ -34,8 +38,7 @@ float steer_pcnt = 0; // Desired steering speed percentage
 
 bool alive = false; // True if we have contact with mainframe
 int hbeat_cnt = 0; // Counter of how many loops have passed since heartbeat
-int req_drive_RPM = 0;
-int req_steer_RPM = 0;
+const float iteration_time = 1/LOOP_HERTZ;
 
 // Clamp value within range - convenience function
 int clamp(int value, int max, int min)
@@ -61,7 +64,10 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
     {
       drive_pcnt = msg->acc;        // Store desired angular acceleration as %
       steer_pcnt = 100.0*(msg->steer)/45; // Store desired steering angle as %
-      req_drive_RPM = (drive_pcnt/100)*MAX_RPM; // Convert % -> RPM for PID calculations
+      for(int i=0;i<4;i++) 
+      {
+          req_RPM[i] = (drive_pcnt/100)*MAX_RPM;
+      }
 
       ROS_INFO_STREAM("Drive command received.");
     }
@@ -93,6 +99,15 @@ int main(int argc, char **argv)
   // Format is [f_l, f_r, b_l, b_r]
   const int dir_pins[4] = {F_L_DIR_PIN, F_R_DIR_PIN, B_L_DIR_PIN, B_R_DIR_PIN};  
   const bool correction[4] = {0, 1, 0, 1}; // Correct motor directions
+
+  int req_RPM[4] = {0,0,0,0};
+  int actual_RPM[4] = {0,0,0,0};
+  int error[4] = {0,0,0,0};
+  int error_prior[4] = {0,0,0,0};
+  float integral[4] = {0,0,0,0};
+  float derivative[4] = {0,0,0,0};
+  int output[4] = {0,0,0,0};
+ 
 
   int drive_pwm = 0;  // Wheel PWM
   int steer_pwm = 0;  // Wheel PWM
@@ -151,13 +166,21 @@ int main(int argc, char **argv)
 
     if (alive)
     {
+      for(int k=0;k<4;k++) {
+          error[k] = req_RPM[k] - actual_RPM[k];
+	  integral[k] = integral[k] + (error[k] * iteration_time);
+          derivative[k] = (error[k] - error_prior[k]) / iteration_time;
+          output[k] = (K_P*error[k]) + (K_I*integral[k]) + (K_D*derivative[k]);
+          error_prior[k] = error[k];
+      }
+      
+      drive_pwm = limit_drive*output[0];
 
       // Map drive percentage to PWM as a quadratic, with limit
-      drive_pwm = limit_drive*MAX_PWM*pow(drive_pcnt/100, 2);
-
+      //drive_pwm = limit_drive*MAX_PWM*pow(drive_pcnt/100, 2);
+      
       // Make sure the PWM val hasn't gone outside range somehow
       drive_pwm = clamp(drive_pwm, MAX_PWM, -MAX_PWM);
-
 
       // Map steering percentage to PWM as a quadratic, with limit
       steer_pwm = limit_steer*MAX_PWM*pow(steer_pcnt/100, 2);
@@ -172,7 +195,6 @@ int main(int argc, char **argv)
       steer_pwm = 0;
     }
 
-
     for (int i = 0; i < 4; i++)
     {
       // Correct wheel directions
@@ -181,7 +203,6 @@ int main(int argc, char **argv)
       // Change wheel speed outputs
       pwmWrite(PIN_BASE + i, drive_pwm); // pins of PWM board, (0, 1, 2, 3)
     }
-  
 
     digitalWrite (B_STR_PIN, steer_dir);
     digitalWrite (F_STR_PIN, !steer_dir);
