@@ -66,7 +66,7 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
       steer_pcnt = 100.0*(msg->steer)/45; // Store desired steering angle as %
       for(int i=0;i<4;i++) 
       {
-          req_RPM[i] = (drive_pcnt/100)*MAX_RPM;
+          req_RPM[i] = abs((drive_pcnt/100)*MAX_RPM);
       }
 
       ROS_INFO_STREAM("Drive command received.");
@@ -107,9 +107,9 @@ int main(int argc, char **argv)
   float integral[4] = {0,0,0,0};
   float derivative[4] = {0,0,0,0};
   int output[4] = {0,0,0,0};
- 
+  int drive_pwm[4] = {0,0,0,0};
 
-  int drive_pwm = 0;  // Wheel PWM
+  //int drive_pwm = 0;  // Wheel PWM
   int steer_pwm = 0;  // Wheel PWM
 
   bool drive_dir = 1; // Wheel direction
@@ -172,15 +172,16 @@ int main(int argc, char **argv)
           derivative[k] = (error[k] - error_prior[k]) / iteration_time;
           output[k] = (K_P*error[k]) + (K_I*integral[k]) + (K_D*derivative[k]);
           error_prior[k] = error[k];
+
+          drive_pwm[k] = limit_drive*output[k];
+          drive_pwm[k] = clamp(drive_pwm[k], MAX_RPM, 0);
       }
-      
-      drive_pwm = limit_drive*output[0];
 
       // Map drive percentage to PWM as a quadratic, with limit
       //drive_pwm = limit_drive*MAX_PWM*pow(drive_pcnt/100, 2);
       
       // Make sure the PWM val hasn't gone outside range somehow
-      drive_pwm = clamp(drive_pwm, MAX_PWM, -MAX_PWM);
+      //drive_pwm = clamp(drive_pwm, MAX_PWM, 0);
 
       // Map steering percentage to PWM as a quadratic, with limit
       steer_pwm = limit_steer*MAX_PWM*pow(steer_pcnt/100, 2);
@@ -191,7 +192,9 @@ int main(int argc, char **argv)
     else 
     {
       // Stop rover if dead
-      drive_pwm = 0;
+      for(int j = 0; j < 4; j++) {
+          drive_pwm[j] = 0;
+      }
       steer_pwm = 0;
     }
 
@@ -201,7 +204,7 @@ int main(int argc, char **argv)
       digitalWrite (dir_pins[i], correction[i] != drive_dir);
 
       // Change wheel speed outputs
-      pwmWrite(PIN_BASE + i, drive_pwm); // pins of PWM board, (0, 1, 2, 3)
+      pwmWrite(PIN_BASE + i, drive_pwm[i]); // pins of PWM board, (0, 1, 2, 3)
     }
 
     digitalWrite (B_STR_PIN, steer_dir);
