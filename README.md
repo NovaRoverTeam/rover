@@ -18,5 +18,5 @@ Msg type:    rover/DriveCmd (custom)<br />
 Description: Receives speed and steering commands from the base station.
 
 Topic:       **encoders**<br />
-Msg type:    rover/Encoders (custom)<br />
+Msg type:    rover/RPM (custom)<br />
 Description: Receives RPM values reported by the Arduino connected to the wheel encoders.
