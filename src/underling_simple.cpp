@@ -31,6 +31,7 @@ using namespace std;
 #define B_STR_PIN 28 // 20
 
 #include <rover/DriveCmd.h>
+#include <rover/RPM.h>
 #include <std_msgs/Empty.h>
 
 float drive_pcnt = 0; // Desired wheel speed percentage
@@ -39,6 +40,9 @@ float steer_pcnt = 0; // Desired steering speed percentage
 bool alive = false; // True if we have contact with mainframe
 int hbeat_cnt = 0; // Counter of how many loops have passed since heartbeat
 const float iteration_time = 1/LOOP_HERTZ;
+
+int req_RPM[4]    = {0,0,0,0};
+int actual_RPM[4] = {0,0,0,0}; // RPM values as reported by Arduino
 
 // Clamp value within range - convenience function
 int clamp(int value, int max, int min)
@@ -73,6 +77,19 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
     }
 }
 
+
+// Callback for subscription to drive command topic "cmd_data"
+void encoders_cb(const rover::RPM::ConstPtr& msg)
+{    
+    actual_RPM[0] = msg->rpm_fl;
+    actual_RPM[1] = msg->rpm_fr; 
+    actual_RPM[2] = msg->rpm_bl; 
+    actual_RPM[3] = msg->rpm_br; 
+    
+    ROS_INFO_STREAM("RPMs received.");
+}
+
+
 // Callback for heartbeat subscription
 void hbeat_cb(const std_msgs::Empty::ConstPtr& msg)
 {
@@ -88,7 +105,8 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
   ros::Rate loop_rate(LOOP_HERTZ);
 
-  ros::Subscriber drivecmd_sub = n.subscribe("/mainframe/cmd_data", 5, cmd_data_cb);	
+  ros::Subscriber drivecmd_sub = n.subscribe("cmd_data", 5, cmd_data_cb);
+  ros::Subscriber encoders_sub = n.subscribe("encoders", 5, encoders_cb);	
   ros::Subscriber hbeat_sub = n.subscribe("hbeat", 1, hbeat_cb);	
 
   // If no heartbeat for 2 seconds, rover dies
@@ -97,11 +115,14 @@ int main(int argc, char **argv)
   // ****************** VARIABLES ********************** //
 
   // Format is [f_l, f_r, b_l, b_r]
-  const int dir_pins[4] = {F_L_DIR_PIN, F_R_DIR_PIN, B_L_DIR_PIN, B_R_DIR_PIN};  
+  const int dir_pins[4] = {F_L_DIR_PIN, 
+                           F_R_DIR_PIN, 
+                           B_L_DIR_PIN, 
+                           B_R_DIR_PIN};  
+
   const bool correction[4] = {0, 1, 0, 1}; // Correct motor directions
 
-  int req_RPM[4] = {0,0,0,0};
-  int actual_RPM[4] = {0,0,0,0};
+  // PID variables
   int error[4] = {0,0,0,0};
   int error_prior[4] = {0,0,0,0};
   float integral[4] = {0,0,0,0};
@@ -109,7 +130,7 @@ int main(int argc, char **argv)
   int output[4] = {0,0,0,0};
   int drive_pwm[4] = {0,0,0,0};
 
-  //int drive_pwm = 0;  // Wheel PWM
+  // int drive_pwm = 0;  // Wheel PWM
   int steer_pwm = 0;  // Wheel PWM
 
   bool drive_dir = 1; // Wheel direction
