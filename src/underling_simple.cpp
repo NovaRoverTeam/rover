@@ -152,10 +152,10 @@ int main(int argc, char **argv)
     k_p = atof(argv[3]);
     k_i = atof(argv[4]);
     k_d = atof(argv[5]);
-    req_RPM[0] = atof(argv[6]);
-    req_RPM[1] = atof(argv[6]);
-    req_RPM[2] = atof(argv[6]);
-    req_RPM[3] = atof(argv[6]);
+    req_RPM[0] = atoi(argv[6]);
+    req_RPM[1] = atoi(argv[6]);
+    req_RPM[2] = atoi(argv[6]);
+    req_RPM[3] = atoi(argv[6]);
   }
 
   // ******************** SETUP ************************ //
