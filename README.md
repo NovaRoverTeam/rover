@@ -1,13 +1,13 @@
 # rover
 Contains the main control program to run on the Mars rover.
 
-##Dependencies:
+## Dependencies:
 
 - WiringPi (http://wiringpi.com/download-and-install/)
 
 - pca9685 (https://github.com/Reinbert/pca9685)
 
-##Subscriptions:
+## Subscriptions:
 
 Topic:       hbeat
 Msg type:    std_msgs/Empty
