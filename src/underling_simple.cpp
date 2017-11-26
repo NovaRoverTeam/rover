@@ -71,7 +71,8 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
       steer_pcnt = 100.0*(msg->steer)/45; // Store desired steering angle as %
       for(int i=0;i<4;i++) 
       {
-          req_RPM[i] = abs((drive_pcnt/100)*MAX_RPM);
+	  // UNCOMMENT ME WHEN FINISHED TUNING PID
+          //req_RPM[i] = abs((drive_pcnt/100)*MAX_RPM);
       }
 
       ROS_INFO_STREAM("Drive command received.");
@@ -144,13 +145,17 @@ int main(int argc, char **argv)
   float k_i = 0.0;
   float k_d = 0.0;
 
-  if (argc == 6)
+  if (argc == 7)
   {
     limit_drive = atof(argv[1]);
     limit_steer = atof(argv[2]);
     k_p = atof(argv[3]);
     k_i = atof(argv[4]);
     k_d = atof(argv[5]);
+    req_RPM[0] = atof(argv[6]);
+    req_RPM[1] = atof(argv[6]);
+    req_RPM[2] = atof(argv[6]);
+    req_RPM[3] = atof(argv[6]);
   }
 
   // ******************** SETUP ************************ //
@@ -235,13 +240,13 @@ int main(int argc, char **argv)
       // Change wheel speed outputs
       pwmWrite(PIN_BASE + i, drive_pwm[i]); // pins of PWM board, (0, 1, 2, 3)
     }
-
+/*
     digitalWrite (B_STR_PIN, steer_dir);
     digitalWrite (F_STR_PIN, !steer_dir);
 
     pwmWrite(PIN_BASE + 4, steer_pwm); // pins of PWM board, (4, 5 for steering)
     pwmWrite(PIN_BASE + 5, steer_pwm);
-
+*/
     hbeat_cnt++; // Increment heartbeat tracking timer
 
     ros::spinOnce();
