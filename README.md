@@ -7,6 +7,8 @@ Contains the main control program to run on the Mars rover.
 
 - pca9685 (https://github.com/Reinbert/pca9685)
 
+- rosserial (http://wiki.ros.org/rosserial_arduino/Tutorials/Arduino%20IDE%20Setup)
+
 ## Subscriptions:
 
 Topic:       **hbeat**<br />
