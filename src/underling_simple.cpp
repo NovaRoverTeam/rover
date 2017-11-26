@@ -7,7 +7,7 @@
 using namespace std;
 
 #include <wiringPi.h>
-#include <pca9685.h>
+#include "pca9685/src/pca9685.h" // PWM board library
 //#include <miniPID.h>
 
 #define K_P 5

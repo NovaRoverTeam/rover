@@ -227,7 +227,7 @@ if (NOT TARGET gamepad)
 endif()
 
 
-target_link_libraries(underling wiringPi wiringPiPca9685   ${catkin_LIBRARIES})
+target_link_libraries(underling wiringPi ${catkin_LIBRARIES})
 
 #target_link_libraries(debug wiringPi wiringPiPca9685 ${catkin_LIBRARIES})
 
