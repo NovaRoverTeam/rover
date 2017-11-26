@@ -5,7 +5,7 @@
   <arg name="K_p" default="0"/>
   <arg name="K_i" default="0"/>
   <arg name="K_d" default="0"/>
-  <arg name="set_rpm" default="0"/>
+  <arg name="set_rpm" default="20"/>
   <arg name="duino_dev" default="/dev/ttyACM0"/>
 
   <!--
