@@ -11,5 +11,7 @@
   <node name="underling" pkg="rover" type="underling" output="screen" args="$(arg lim_drive) $(arg lim_steer)"/>
 
   <node name="serial_node" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_dev)"/>
+
+  <node name="gps" pkg="gps" type="gps" output="screen"/>
   
 </launch>
