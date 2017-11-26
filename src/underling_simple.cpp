@@ -10,7 +10,8 @@ using namespace std;
 #include "pca9685/src/pca9685.h" // PWM board library
 //#include <miniPID.h>
 
-#define K_P 5
+// Default K values
+#define K_P 0
 #define K_I 0
 #define K_D 0
 
@@ -139,10 +140,17 @@ int main(int argc, char **argv)
   float limit_drive = 0.3;
   float limit_steer = 0.5;
 
-  if (argc == 3)
+  float k_p = 0.0;
+  float k_i = 0.0;
+  float k_d = 0.0;
+
+  if (argc == 6)
   {
     limit_drive = atof(argv[1]);
     limit_steer = atof(argv[2]);
+    k_p = atof(argv[3]);
+    k_i = atof(argv[4]);
+    k_d = atof(argv[5]);
   }
 
   // ******************** SETUP ************************ //
@@ -191,7 +199,7 @@ int main(int argc, char **argv)
           error[k] = req_RPM[k] - actual_RPM[k];
 	  integral[k] = integral[k] + (error[k] * iteration_time);
           derivative[k] = (error[k] - error_prior[k]) / iteration_time;
-          output[k] = (K_P*error[k]) + (K_I*integral[k]) + (K_D*derivative[k]);
+          output[k] = (k_p*error[k]) + (k_i*integral[k]) + (k_d*derivative[k]);
           error_prior[k] = error[k];
 
           drive_pwm[k] = limit_drive*output[k];
