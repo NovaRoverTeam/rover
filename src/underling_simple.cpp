@@ -1,51 +1,77 @@
+/* **************************************************************************************
+ *  NOVA ROVER TEAM - URC2018
+ *  This is the code executed onboard the rover to manage all driving-related aspects,
+ *  such as motor speed control, motor direction control, etc.
+ *  
+ *  Link to motors:
+ *  https://www.servocity.com/118-rpm-hd-premium-planetary-gear-motor-w-encoder
+ *  
+ *  Link to PWM board:
+ *  http://www.robotshop.com/uk/pca9685-16-channel-12-bit-pwm-servo-driver.html
+ * 
+ *  Author: Ben Steer
+ *  Last modified by: Andrew Stuart (30/11/2017)
+ ****************************************************************************************/
+
+/***************************************************************************************************
+* INCLUDES, DECLARATIONS AND GLOBAL VARIABLES
+***************************************************************************************************/
+// General includes
 #include "ros/ros.h"
 #include <ros/console.h>
 #include <math.h>
 #include <stdlib.h>
-
 #include <iostream>
+#include <wiringPi.h>
+#include "pca9685/src/pca9685.h"	// PWM board library
 using namespace std;
 
-#include <wiringPi.h>
-#include "pca9685/src/pca9685.h" // PWM board library
-//#include <miniPID.h>
-
-// Default K values
-#define K_P 0
-#define K_I 0
-#define K_D 0
-
-#define PIN_BASE 160
-#define MAX_PWM 4096
-#define PWM_HERTZ 1000
-#define MAX_RPM 118 // max RPM of servos from data sheet
-
-#define LOOP_HERTZ 10 // Main control loop rate
-
-// Pin definitions for direction-changing GPIOs
-#define B_L_DIR_PIN 4 // 23
-#define F_R_DIR_PIN 5 // 24
-#define F_L_DIR_PIN 23 // 13
-#define B_R_DIR_PIN 24 // 19
-
-#define F_STR_PIN 27 // 16
-#define B_STR_PIN 28 // 20
-
+// ROS includes
 #include <rover/DriveCmd.h>
 #include <rover/RPM.h>
 #include <std_msgs/Empty.h>
 
-float drive_pcnt = 0; // Desired wheel speed percentage
-float steer_pcnt = 0; // Desired steering speed percentage
+// Direction-changing GPIO Pin definitions
+#define B_L_DIR_PIN 4	// 23
+#define F_R_DIR_PIN 5	// 24
+#define F_L_DIR_PIN 23	// 13
+#define B_R_DIR_PIN 24	// 19
 
-bool alive = false; // True if we have contact with mainframe
-int hbeat_cnt = 0; // Counter of how many loops have passed since heartbeat
-const float iteration_time = 1/LOOP_HERTZ;
+// Steering GPIO Pin definitions
+#define F_STR_PIN 27	// 16
+#define B_STR_PIN 28	// 20
 
-int req_RPM[4]    = {0,0,0,0};
-int actual_RPM[4] = {0,0,0,0}; // RPM values as reported by Arduino
+// General constant definitions
+#define PIN_BASE 160
+#define MAX_PWM 4096
+#define PWM_HERTZ 1000	
+#define MAX_RPM 118		// Maximum RPM of servos obtained from data sheet
+#define LOOP_HERTZ 10	// Main control loop rate
 
-// Clamp value within range - convenience function
+// Global variables
+float drive_pcnt = 0;	// Desired wheel speed percentage
+float steer_pcnt = 0;	// Desired steering speed percentage
+
+bool alive = false;		// True if we have contact with mainframe
+int hbeat_cnt = 0;		// Counter of how many loops have passed since heartbeat
+const float iteration_time = 1.0/LOOP_HERTZ;	// Iteration time of the main loop
+
+int req_RPM[4] = {0,0,0,0};		// The RPM values which are desired for each wheel
+int actual_RPM[4] = {0,0,0,0}; 	// The RPM values for each wheel as reported by the Arduino
+
+/***************************************************************************************************
+* CLAMP FUNCTION
+*
+* A convenience function - this function clamps a value within a certain range, dependent on
+* the passed minimum and maximum argument values.
+*
+* Inputs:	int value - The value to be clamped
+*			int max - The maximum value this value may be
+*			int min - The minimum value this value may be
+*
+* Output:	Int of either value, min or max, depending on value.
+* todo: change arguments from (...,max,min) to (...,min,max) for sanity and modify code appropriately
+***************************************************************************************************/
 int clamp(int value, int max, int min)
 {
   if (value > max) return max;
@@ -53,7 +79,19 @@ int clamp(int value, int max, int min)
   else return value;
 }
 
-// Roll value over range - convenience function
+/***************************************************************************************************
+* ROLLOVER FUNCTION
+*
+* A convenience function - this function will "rollover" a value if it exceeds a limit so that it
+* will stay within a certain range.
+*
+* Inputs:	int value - The value to be rolled over
+* 			int max - The maximum rollover limit
+*			int min - The minimum rollover limit
+*
+* Output:	Int of either value, min or max, depending on value.
+* todo: change arguments from (...,max,min) to (...,min,max) for sanity and modify code appropriately
+***************************************************************************************************/
 int rollover(int value, int max, int min)
 {
   if (value > max) return min;
@@ -61,28 +99,43 @@ int rollover(int value, int max, int min)
   else return value;
 }
 
-
-// Callback for subscription to drive command topic "cmd_data"
+/***************************************************************************************************
+* COMMAND CALLBACK FUNCTION
+*
+* The callback function for the subscription to drive command topic "cmd_data". This function is 
+* called whenever new "cmd_data" data is published and sets the new acceleration and 
+* steering percentage for the rover via global variables.
+*
+* Input:	const rover::DriveCmd::ConstPtr& msg) - The message object containing the relevent data
+***************************************************************************************************/
 void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
 {    
     if (alive)
     {
-      drive_pcnt = msg->acc;        // Store desired angular acceleration as %
-      steer_pcnt = 100.0*(msg->steer)/45; // Store desired steering angle as %
+      drive_pcnt = msg->acc;				// Store desired acceleration as %
+      steer_pcnt = 100.0*(msg->steer)/45; 	// Store desired steering angle as %
+	  // Set new RPM of each wheel
       for(int i=0;i<4;i++) 
       {
 	  // UNCOMMENT ME WHEN FINISHED TUNING PID
           //req_RPM[i] = abs((drive_pcnt/100)*MAX_RPM);
-      }
-
+	  }
       ROS_INFO_STREAM("Drive command received.");
     }
 }
 
-
-// Callback for subscription to drive command topic "cmd_data"
+/***************************************************************************************************
+* ENCODERS CALLBACK FUNCTION
+*
+* The callback function for the subscription to the encoder data. This function is 
+* called whenever new RPM calculations are sent by the Arduino and saves the RPM values into the
+* global array actual_RPM so the data may be used in the motor PID controller.
+*
+* Input:	const rover::DriveCmd::ConstPtr& msg - The message object containing the relevent data.
+***************************************************************************************************/
 void encoders_cb(const rover::RPM::ConstPtr& msg)
-{    
+{   
+	// Record data into array index respective to each wheel
     actual_RPM[0] = msg->rpm_fl;
     actual_RPM[1] = msg->rpm_fr; 
     actual_RPM[2] = msg->rpm_bl; 
@@ -91,8 +144,16 @@ void encoders_cb(const rover::RPM::ConstPtr& msg)
     ROS_INFO_STREAM("RPMs received.");
 }
 
-
-// Callback for heartbeat subscription
+/***************************************************************************************************
+* HEARTBEAT CALLBACK FUNCTION
+*
+* The callback function for the subscription to the heartbeat from the mainframe. This function is 
+* called whenever a new heartbeat is sent from the mainframe.
+*
+* Whenever a new heartbeat is received from the mainframe, this means that the rover can still communicate
+* with the mainframe. The mainframe can still
+* Input:	const rover::DriveCmd::ConstPtr& msg - The message object containing the relevent data.
+***************************************************************************************************/
 void hbeat_cb(const std_msgs::Empty::ConstPtr& msg)
 {
   alive = true;
