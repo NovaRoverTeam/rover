@@ -215,9 +215,6 @@ add_executable(underling src/underling_simple.cpp include/pca9685/src/pca9685.c)
 #add_executable(debug src/debug.cpp)
 #add_executable(arm src/arm.cpp)
 
-
-add_dependencies(underling ${catkin_EXPORTED_TARGETS})
-
 #add_dependencies(arm ${catkin_EXPORTED_TARGETS})
 #add_dependencies(debug ${catkin_EXPORTED_TARGETS})
 
@@ -228,6 +225,9 @@ endif()
 
 
 target_link_libraries(underling wiringPi ${catkin_LIBRARIES})
+
+add_dependencies(underling ${catkin_EXPORTED_TARGETS})
+add_dependencies(underling ${rover_EXPORTED_TARGETS})
 
 #target_link_libraries(debug wiringPi wiringPiPca9685 ${catkin_LIBRARIES})
 
