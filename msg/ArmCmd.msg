@@ -1,5 +1,8 @@
 # Message format for sending manipulator commands to rover.
 
+bool start # Start button down?
+bool back  # Back button down?
+
 int8 base     # -1 left, 0 none/both or 1 right
 int8 shoulder # -1 down, 0 none/both or 1 up
 int8 forearm  # etc
