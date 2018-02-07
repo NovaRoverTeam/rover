@@ -6,6 +6,7 @@ Contains the main control program to run on the Mars rover.
 - WiringPi (http://wiringpi.com/download-and-install/)
 
 - pca9685 (https://github.com/Reinbert/pca9685)
+This needs to be cloned into the "include" folder.
 
 - rosserial (http://wiki.ros.org/rosserial_arduino/Tutorials/Arduino%20IDE%20Setup)
 

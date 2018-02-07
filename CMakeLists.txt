@@ -51,6 +51,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   DriveCmd.msg
+  ArmCmd.msg
   RPM.msg
   #RawControl.msg
   #Command.msg
