@@ -1,4 +1,4 @@
-/* **************************************************************************************
+/****************************************************************************************
  *  NOVA ROVER TEAM - URC2018
  *  This is the code executed onboard the rover to manage all driving-related aspects,
  *  such as motor speed control, motor direction control, etc.
@@ -10,82 +10,65 @@
  *  http://www.robotshop.com/uk/pca9685-16-channel-12-bit-pwm-servo-driver.html
  * 
  *  Author: Ben Steer
- *  Last modified by: Andrew Stuart (30/11/2017)
+ *  Last modified by: Andrew Stuart (3/1/2018)
  ****************************************************************************************/
 
 /***************************************************************************************************
 * INCLUDES, DECLARATIONS AND GLOBAL VARIABLES
 ***************************************************************************************************/
-// General includes
+// ________________________General includes________________________
 #include "ros/ros.h"
 #include <ros/console.h>
 #include <math.h>
 #include <stdlib.h>
-#include <algorithm>
-
+#include <algorithm> // ?
 #include <iostream>
 #include <wiringPi.h>
-
 #include "pca9685/src/pca9685.h" // PWM board library
-//#include <miniPID.h>
+using namespace std;
 
-// Default K values
-#define K_P 0
-#define K_I 0
-#define K_D 0
+// __________________________ROS includes__________________________
+#include <rover/DriveCmd.h>
+#include <rover/RPM.h>
+#include <std_msgs/Empty.h>
 
+// __________________________Definitions___________________________
+#define LOOP_HERTZ 50 // Main control loop rate
+
+#define K_P 1.2
+#define K_I 5.0
+#define K_D 0.025
+
+
+// PWM/RPM Definitions
 #define PIN_BASE 160
 #define PWM_HERTZ 1000
-
 #define MAX_PWM 4096 // Max PWM of pca9685
-#define MAX_RPM 118 // Max RPM of motors from data sheet
-
-#define LOOP_HERTZ 10 // Main control loop rate
+#define MAX_RPM 128 // Experimentally obtained max RPM
 
 // Pin definitions for direction-changing GPIOs
 #define B_L_DIR_PIN 4 // 23
 #define F_R_DIR_PIN 5 // 24
 #define F_L_DIR_PIN 23 // 13
 #define B_R_DIR_PIN 24 // 19
-
 #define F_STR_PIN 27 // 16
 #define B_STR_PIN 28 // 20
 
-#include "pca9685/src/pca9685.h"	// PWM board library
-using namespace std;
-
-// ROS includes
-#include <rover/DriveCmd.h>
-#include <rover/RPM.h>
-#include <std_msgs/Empty.h>
-
-// Direction-changing GPIO Pin definitions
-#define B_L_DIR_PIN 4	// 23
-#define F_R_DIR_PIN 5	// 24
-#define F_L_DIR_PIN 23	// 13
-#define B_R_DIR_PIN 24	// 19
-
-// Steering GPIO Pin definitions
-#define F_STR_PIN 27	// 16
-#define B_STR_PIN 28	// 20
-
-// General constant definitions
-#define PIN_BASE 160
-#define MAX_PWM 4096
-#define PWM_HERTZ 1000	
-#define MAX_RPM 118		// Maximum RPM of servos obtained from data sheet
-#define LOOP_HERTZ 10	// Main control loop rate
-
 // Global variables
+float limit_drive = 0;
+float limit_steer = 0;
 float drive_pcnt = 0;	// Desired wheel speed percentage
 float steer_pcnt = 0;	// Desired steering speed percentage
-
+int tempCount = 0;
+int tempCount2 = 0;
 bool alive = false;		// True if we have contact with mainframe
 int hbeat_cnt = 0;		// Counter of how many loops have passed since heartbeat
 const float iteration_time = 1.0/LOOP_HERTZ;	// Iteration time of the main loop
 
 int req_RPM[4] = {0,0,0,0};		// The RPM values which are desired for each wheel
 int actual_RPM[4] = {0,0,0,0}; 	// The RPM values for each wheel as reported by the Arduino
+int steer_mod[4] = {0,1,1,0};
+float MAX_STEER_MOD = 0.5;
 
 /***************************************************************************************************
 * CLAMP FUNCTION
@@ -107,7 +90,6 @@ int clamp(int value, int max, int min)
   else return value;
 }
 
-<<<<<<< HEAD
 float fclamp(float value, float max, float min)
 {
   if (value > max) return max;
@@ -115,7 +97,18 @@ float fclamp(float value, float max, float min)
   else return value;
 }
 
-// Roll value over range - convenience function
+int MapRPMToPWM(float RPM)
+{
+  int PWM;
+  if(RPM > 0) 
+  {
+    PWM = round((RPM + 3.744653)/0.03281);	// Determined by plotting PWM vs. RPM and obtaining the line of best fit
+    PWM = clamp(PWM, MAX_PWM, 0);	// Clamp PWM to valid value
+  }
+  else PWM = 0;
+  return PWM;
+}
+
 /***************************************************************************************************
 * ROLLOVER FUNCTION
 *
@@ -147,13 +140,49 @@ int rollover(int value, int max, int min)
 ***************************************************************************************************/
 void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
 {    
+    int speedL, speedR;
     if (alive)
     {
-      drive_pcnt = msg->acc;              // Store desired angular acceleration as %
+      drive_pcnt = msg->acc;              
       steer_pcnt = 100.0*(msg->steer)/45; // Store desired steering angle as %
+      if(fabs(drive_pcnt) < 0.2) {
+        if(steer_pcnt<0) {
+          steer_mod[0] = 0;
+          steer_mod[1] = 1;
+          steer_mod[2] = 1;
+          steer_mod[3] = 1;
+        }
+        else { 
+          steer_mod[0] = 1;
+          steer_mod[1] = 0;
+          steer_mod[2] = 0;
+          steer_mod[3] = 0;
+        }
+        speedL = limit_drive*fabs((steer_pcnt*MAX_RPM)/100);      
+        req_RPM[0] = speedL;
+        req_RPM[1] = speedL;
+        req_RPM[2] = speedL;
+        req_RPM[3] = speedL;
+      }
+      else {
+        steer_mod[0] = 1;
+        steer_mod[1] = 1;
+        steer_mod[2] = 0;
+        steer_mod[3] = 1;
+        if(steer_pcnt>0) {
+          speedL = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)-(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100)); 
+          speedR = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)+(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100));
+		}
+        else {
+          speedL = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)+(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100)); 
+          speedR = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)-(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100));
+        }     
+        req_RPM[0] = speedR;
+        req_RPM[1] = speedL;
+        req_RPM[2] = speedR;
+        req_RPM[3] = speedL;
+      }
     }
-      
-    ROS_INFO_STREAM("Drive command received.");
 }
 
 /***************************************************************************************************
@@ -168,12 +197,13 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
 void encoders_cb(const rover::RPM::ConstPtr& msg)
 {   
     // Record data into array index respective to each wheel
-    actual_RPM[0] = msg->rpm_fl;
-    actual_RPM[1] = msg->rpm_fr; 
+    //actual_RPM[0] = msg->rpm_fl;
+    //actual_RPM[1] = msg->rpm_fr; 
+    //actual_RPM[0] = msg->rpm_fr;
+    actual_RPM[0] = msg->rpm_fr;
+    actual_RPM[1] = msg->rpm_fl;
     actual_RPM[2] = msg->rpm_bl; 
-    actual_RPM[3] = msg->rpm_br; 
-    
-    ROS_INFO_STREAM("RPMs received.");
+    actual_RPM[3] = msg->rpm_fl; // encoder not working
 }
 
 /***************************************************************************************************
@@ -230,48 +260,31 @@ int main(int argc, char **argv)
   const bool skid_orig[4] = {1, 1, 1, 1};
 
   // PID variables
-  /*
+  
   float error[4] = {0,0,0,0};
   float error_prior[4] = {0,0,0,0};
   float integral[4] = {0,0,0,0};
   float derivative[4] = {0,0,0,0};
-  float output[4] = {0,0,0,0}; */
+  float output[4] = {0,0,0,0};
 
-  int drive_pwm = 0; // Wheel PWMs when driving normally
+  //int drive_pwm = 0; // Wheel PWMs when driving normally
   int steer_pwm = 0; // Wheel PWMs when turning on the spot
+  int drive_pwm[4] = {0,0,0,0};
+
 
   bool drive_dir = 1; // Wheel direction
-  bool steer_dir = 1; // Steering direction
+  bool steer_dir = 0.5; // Steering direction
   bool on_the_spot = 0; //Steering on the spot?
 
-  // Limiters of maximum steering and driving percentages
-  float limit_drive = 0;
-  float limit_steer = 0;
+  // Highest percentage by which steering is modified
 
-  // Highest percentage by which steering modifi
-  float MAX_STEER_MOD = 0.5;
-
-  /*
-  float k_p = 0.0;
-  float k_i = 0.0;
-  float k_d = 0.0; */
 
   if (argc == 4)
   {
     limit_drive = atof(argv[1]);
     limit_steer = atof(argv[2]);
     MAX_STEER_MOD = atof(argv[3]);
-    /*
-    k_p = atof(argv[4]);
-    k_i = atof(argv[5]);
-    k_d = atof(argv[6]);
-    req_RPM[0] = atoi(argv[7]);
-    req_RPM[1] = atoi(argv[7]);
-    req_RPM[2] = atoi(argv[7]);
-    req_RPM[3] = atoi(argv[7]); */
   }
-
-  ROS_INFO_STREAM("max_steer_mod: " << MAX_STEER_MOD);
 
   // ******************** SETUP ************************ //
 
@@ -292,12 +305,12 @@ int main(int argc, char **argv)
     pinMode (dir_pins[i], OUTPUT);
     digitalWrite (dir_pins[i], drive_dir);
   }
-
+  
   pinMode (F_STR_PIN, OUTPUT);
   pinMode (B_STR_PIN, OUTPUT);
   digitalWrite (B_STR_PIN, steer_dir);
   digitalWrite (F_STR_PIN, !steer_dir);
-
+  ros::Duration(5).sleep();
   // ****************** MAIN LOOP *************************** //
 
   while (ros::ok())
@@ -305,8 +318,8 @@ int main(int argc, char **argv)
     // If no heartbeat, kill rover
     if (hbeat_cnt > hbeat_timeout) 
     {
-   	    alive = false; 
-    	ROS_INFO_STREAM("No heartbeat, killing rover :(");   
+   	alive = false; 
+    	//ROS_INFO_STREAM("No heartbeat, killing rover :(");   
    	}
 
     // Set new motor directions
@@ -314,89 +327,53 @@ int main(int argc, char **argv)
     steer_dir = !(steer_pcnt < 0);
 
     // If no throttle, switch to "turning on the spot" mode
-   	on_the_spot = fabs(drive_pcnt) < 0.2;
-
-	/*
-	for(int k=0;k<4;k++) {
-	  error[k] = req_RPM[k] - actual_RPM[k];
-	  integral[k] = integral[k] + (error[k] * iteration_time);
-	  derivative[k] = (error[k] - error_prior[k]) / iteration_time;
-	  output[k] = (k_p*error[k]) + (k_i*integral[k]) + (k_d*derivative[k]);
-	  error_prior[k] = error[k];
-
-	  drive_pwm[k] = limit_drive*output[k];
-	  drive_pwm[k] = clamp(drive_pwm[k], MAX_PWM, 0);
-	} */
- 
-
-    // If we are turning on the spot (no throttle)
-    if (on_the_spot)
+   	//on_the_spot = fabs(drive_pcnt) < 0.2;
+    for(int k=0;k<4;k++) 
     {
-	    // Map steering percentage to PWM as a quadratic, with limiter. 
-    	steer_pwm = limit_steer*MAX_PWM*pow(steer_pcnt/100, 2);
+        error[k] = req_RPM[k] - actual_RPM[k];
+	    integral[k] = integral[k] + (error[k] * iteration_time);
+	    derivative[k] = (error[k] - error_prior[k]) / iteration_time;
+	    output[k] = (K_P*error[k]) + (K_I*integral[k]) + (K_D*derivative[k]);
+	    error_prior[k] = error[k];
+        integral[k] = fclamp(integral[k], 25.0, -25.0);
+
+        drive_pwm[k] = MapRPMToPWM(round(actual_RPM[k]+output[k]));
+    }
+    //drive_pwm[3] = MapRPMToPWM(req_RPM[3]);
 	
-     	// Make sure the PWM val hasn't gone outside range somehow
-     	steer_pwm = clamp(steer_pwm, MAX_PWM, -MAX_PWM);
 
-        // Use the steering trigger value as our throttle
-	    drive_pwm = steer_pwm;
+    if(tempCount==3) {
+        //ROS_INFO_STREAM("INCREASING PWM");
+        
+        ROS_INFO_STREAM("Req RPM: " << req_RPM[0] << " Actual RPM: " << actual_RPM[0] << " Drive PWM: " << drive_pwm[0] << " Output: " << output[0] << " Integral: " << integral[0] << " Derivative: " << derivative[0] << " Error: " << error[0] << " itertationTime: " << iteration_time);
 
-        // Reassign wheel directions
-	    if (steer_dir)
-          copy(skid_dir1, skid_dir1+4, skid_overlay);
-        else
-          copy(skid_dir2, skid_dir2+4, skid_overlay);
+		//ROS_INFO_STREAM("Req RPM: " << req_RPM[0] << " Actual RPM: " << actual_RPM[0];);
+        tempCount = 0;
+		//tempCount2++;
     }
-    else
-    {
-        // Map drive percentage to PWM as a quadratic, with limit
-	    drive_pwm = limit_drive*MAX_PWM*pow(drive_pcnt/100, 2);
-
-	    // Make sure the PWM val hasn't gone outside range somehow
-	    drive_pwm = clamp(drive_pwm, MAX_PWM, 0);
-
-        // Set wheel directions to normal
-        copy(skid_orig, skid_orig+4, skid_overlay);
-    }
-
     if (!alive)
     {
       // Stop rover if dead
-      drive_pwm = 0;
+      drive_pwm[0] = 0;
+      drive_pwm[1] = 0;
+      drive_pwm[2] = 0;
+      drive_pwm[3] = 0;
       steer_pwm = 0;
     }
 
-    ROS_INFO_STREAM("on the spot: " << on_the_spot);
-
     for (int i = 0; i < 4; i++)
     {
-      // Amount to steer by, if not steering on the spot
-      float steer_mod = 1;
-
-      if (!on_the_spot)
-      {
-        // Add and subtract steering proportion from left and right wheels according to
-        //  steering direction. No longer inverts.
-        if (i == 0 || i == 2)
-            steer_mod = 1 - dirs[steer_dir]*fclamp(fabs(steer_pcnt/100), 
-                MAX_STEER_MOD, 0);
-        else 
-            steer_mod = 1 + dirs[steer_dir]*fclamp(fabs(steer_pcnt/100), 
-                MAX_STEER_MOD, 0);
-      }          
-
-      // Correct the wheel directions
       bool direction = (correction[i] != drive_dir);
+      direction = (steer_mod[i] != drive_dir);
 
       // If skid steering command requires opposite direction, switch	
       if (skid_overlay[i] == 0) direction = !direction;
 
       digitalWrite (dir_pins[i], direction);
-
       // Change wheel speed outputs
-      pwmWrite(PIN_BASE + i, steer_mod*drive_pwm); // pins of PWM board, (0, 1, 2, 3)
+      pwmWrite(PIN_BASE + i, drive_pwm[i]); // pins of PWM board, (0, 1, 2, 3)
     }
-
+    tempCount++;
     hbeat_cnt++; // Increment heartbeat tracking timer
 
     ros::spinOnce();
