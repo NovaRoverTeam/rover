@@ -10,7 +10,7 @@
  *  http://www.robotshop.com/uk/pca9685-16-channel-12-bit-pwm-servo-driver.html
  * 
  *  Author: Ben Steer
- *  Last modified by: Andrew Stuart (3/1/2018)
+ *  Last modified by: Ben Steer (16/02/2018)
  ****************************************************************************************/
 
 /***************************************************************************************************
@@ -31,6 +31,7 @@ using namespace std;
 #include <rover/DriveCmd.h>
 #include <rover/RPM.h>
 #include <std_msgs/Empty.h>
+#include <std_msgs/Float32.h>
 
 // __________________________Definitions___________________________
 #define LOOP_HERTZ 50 // Main control loop rate
@@ -39,6 +40,7 @@ using namespace std;
 #define K_I 5.0
 #define K_D 0.025
 
+#define MIN_VOLTAGE 10.0
 
 // PWM/RPM Definitions
 #define PIN_BASE 160
@@ -61,8 +63,13 @@ float drive_pcnt = 0;	// Desired wheel speed percentage
 float steer_pcnt = 0;	// Desired steering speed percentage
 int tempCount = 0;
 int tempCount2 = 0;
-bool alive = false;		// True if we have contact with mainframe
+
+bool alive = false;		// False means rover ceases movement, either radio loss or low battery
+bool hbeat = false;   // Do we have a heartbeat?
+bool volt_ok = false; // Is voltage level okay?
+
 int hbeat_cnt = 0;		// Counter of how many loops have passed since heartbeat
+
 const float iteration_time = 1.0/LOOP_HERTZ;	// Iteration time of the main loop
 
 int req_RPM[4] = {0,0,0,0};		// The RPM values which are desired for each wheel
@@ -218,9 +225,27 @@ void encoders_cb(const rover::RPM::ConstPtr& msg)
 ***************************************************************************************************/
 void hbeat_cb(const std_msgs::Empty::ConstPtr& msg)
 {
-  alive = true;
+  hbeat = true;
   hbeat_cnt = 0;
 }
+
+/***************************************************************************************************
+* VOLTAGE CALLBACK FUNCTION
+*
+* The callback function for the subscription to the voltage from the Arduino Pro Micro.
+*
+***************************************************************************************************/
+void voltage_cb(const std_msgs::Float32::ConstPtr& msg)
+{
+  if (msg->data < MIN_VOLTAGE)
+  {
+    volt_ok = false;
+    ROS_INFO_STREAM("DANGEROUS VOLTAGE LEVEL REACHED ** BEE-BAH **");   
+  }
+  else
+    volt_ok = true;
+}
+
 
 int main(int argc, char **argv)
 {
@@ -233,6 +258,7 @@ int main(int argc, char **argv)
   ros::Subscriber drivecmd_sub = n.subscribe("cmd_data", 5, cmd_data_cb);
   ros::Subscriber encoders_sub = n.subscribe("encoders", 5, encoders_cb);	
   ros::Subscriber hbeat_sub = n.subscribe("hbeat", 1, hbeat_cb);	
+  ros::Subscriber voltage_sub = n.subscribe("voltage", 1, voltage_cb);	
 
   // If no heartbeat for 2 seconds, rover dies
   const int hbeat_timeout = 2*LOOP_HERTZ;
@@ -315,12 +341,11 @@ int main(int argc, char **argv)
 
   while (ros::ok())
   {
-    // If no heartbeat, kill rover
-    if (hbeat_cnt > hbeat_timeout) 
-    {
-   	alive = false; 
-    	//ROS_INFO_STREAM("No heartbeat, killing rover :(");   
-   	}
+    // Check heartbeat, voltage levels and decide whether to kill the rover 
+    if (~hbeat || ~volt_ok)
+      alive = false;
+    else
+      alive = true;
 
     // Set new motor directions
     drive_dir = !(drive_pcnt < 0);
@@ -345,7 +370,7 @@ int main(int argc, char **argv)
     if(tempCount==3) {
         //ROS_INFO_STREAM("INCREASING PWM");
         
-        ROS_INFO_STREAM("Req RPM: " << req_RPM[0] << " Actual RPM: " << actual_RPM[0] << " Drive PWM: " << drive_pwm[0] << " Output: " << output[0] << " Integral: " << integral[0] << " Derivative: " << derivative[0] << " Error: " << error[0] << " itertationTime: " << iteration_time);
+        ROS_INFO_STREAM("Req RPM: " << req_RPM[0] << " Actual RPM: " << actual_RPM[0] << " Drive PWM: " << drive_pwm[0] << " Output: " << output[0] << " Integral: " << integral[0] << " Derivative: " << derivative[0] << " Error: " << error[0] << " iterationTime: " << iteration_time);
 
 		//ROS_INFO_STREAM("Req RPM: " << req_RPM[0] << " Actual RPM: " << actual_RPM[0];);
         tempCount = 0;
@@ -374,6 +399,14 @@ int main(int argc, char **argv)
       pwmWrite(PIN_BASE + i, drive_pwm[i]); // pins of PWM board, (0, 1, 2, 3)
     }
     tempCount++;
+
+      // If no heartbeat, kill rover
+    if (hbeat_cnt > hbeat_timeout) 
+    {
+      hbeat = false;
+    	//ROS_INFO_STREAM("No heartbeat, killing rover :(");   
+   	}
+
     hbeat_cnt++; // Increment heartbeat tracking timer
 
     ros::spinOnce();
