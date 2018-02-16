@@ -65,9 +65,12 @@ bool alive = false;		// True if we have contact with mainframe
 int tempCount = 0;
 int tempCount2 = 0;
 
+
 bool alive = false;		// False means rover ceases movement, either radio loss or low battery
 bool hbeat = false;   // Do we have a heartbeat?
 bool volt_ok = false; // Is voltage level okay?
+
+bool alive = false;		// True if we have contact with mainframe
 
 bool alive = false;		// True if we have contact with mainframe
 
@@ -317,28 +320,24 @@ int main(int argc, char **argv)
 
   while (ros::ok())
   {
-<<<<<<< HEAD
-<<<<<<< HEAD
     // If no heartbeat, kill rover
     if (hbeat_cnt > hbeat_timeout) 
     {
    	    alive = false; 
    	}
-=======
+
     // Check heartbeat, voltage levels and decide whether to kill the rover 
     if (~hbeat || ~volt_ok)
       alive = false;
     else
       alive = true;
->>>>>>> 86556846ec8ee7186ac9a79ae78eae1097f5ce70
-=======
+
     // If no heartbeat, kill rover
     if (hbeat_cnt > hbeat_timeout) 
     {
    	alive = false; 
     	//ROS_INFO_STREAM("No heartbeat, killing rover :(");   
    	}
->>>>>>> parent of 8655684... Added low voltage cutoff function. Kills rover when voltage dangerously low.
 
     // Set new motor directions
     drive_dir = !(drive_pcnt < 0);
@@ -355,22 +354,19 @@ int main(int argc, char **argv)
 
         drive_pwm[k] = MapRPMToPWM(round(actual_RPM[k]+output[k]));
     }
-<<<<<<< HEAD
-=======
-    //drive_pwm[3] = MapRPMToPWM(req_RPM[3]);
+  //drive_pwm[3] = MapRPMToPWM(req_RPM[3]);
 	
 
     if(tempCount==3) {
         //ROS_INFO_STREAM("INCREASING PWM");
         
-<<<<<<< HEAD
-        ROS_INFO_STREAM("Req RPM: " << req_RPM[0] << " Actual RPM: " << actual_RPM[0] << " Drive PWM: " << drive_pwm[0] << " Output: " << output[0] << " Integral: " << integral[0] << " Derivative: " << derivative[0] << " Error: " << error[0] << " iterationTime: " << iteration_time);
->>>>>>> 86556846ec8ee7186ac9a79ae78eae1097f5ce70
-=======
-        ROS_INFO_STREAM("Req RPM: " << req_RPM[0] << " Actual RPM: " << actual_RPM[0] << " Drive PWM: " << drive_pwm[0] << " Output: " << output[0] << " Integral: " << integral[0] << " Derivative: " << derivative[0] << " Error: " << error[0] << " itertationTime: " << iteration_time);
->>>>>>> parent of 8655684... Added low voltage cutoff function. Kills rover when voltage dangerously low.
 
-	
+        ROS_INFO_STREAM("Req RPM: " << req_RPM[0] << " Actual RPM: " << actual_RPM[0] << " Drive PWM: " << drive_pwm[0] << " Output: " << output[0] << " Integral: " << integral[0] << " Derivative: " << derivative[0] << " Error: " << error[0] << " iterationTime: " << iteration_time);
+        ROS_INFO_STREAM("Req RPM: " << req_RPM[0] << " Actual RPM: " << actual_RPM[0] << " Drive PWM: " << drive_pwm[0] << " Output: " << output[0] << " Integral: " << integral[0] << " Derivative: " << derivative[0] << " Error: " << error[0] << " itertationTime: " << iteration_time);
+
+        ROS_INFO_STREAM("Req RPM: " << req_RPM[0] << " Actual RPM: " << actual_RPM[0] << " Drive PWM: " << drive_pwm[0] << " Output: " << output[0] << " Integral: " << integral[0] << " Derivative: " << derivative[0] << " Error: " << error[0] << " itertationTime: " << iteration_time);
+
+
     if (!alive)
     {
       // Stop rover if dead
@@ -392,10 +388,9 @@ int main(int argc, char **argv)
       // Change wheel speed outputs
       pwmWrite(PIN_BASE + i, drive_pwm[i]); // pins of PWM board, (0, 1, 2, 3)
     }
-<<<<<<< HEAD
-=======
+
     tempCount++;
-<<<<<<< HEAD
+
 
       // If no heartbeat, kill rover
     if (hbeat_cnt > hbeat_timeout) 
@@ -403,10 +398,7 @@ int main(int argc, char **argv)
       hbeat = false;
     	//ROS_INFO_STREAM("No heartbeat, killing rover :(");   
    	}
->>>>>>> 86556846ec8ee7186ac9a79ae78eae1097f5ce70
 
-=======
->>>>>>> parent of 8655684... Added low voltage cutoff function. Kills rover when voltage dangerously low.
     hbeat_cnt++; // Increment heartbeat tracking timer
 
     ros::spinOnce();
