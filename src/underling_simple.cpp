@@ -59,8 +59,6 @@ float limit_drive = 0;
 float limit_steer = 0;
 float drive_pcnt = 0;	// Desired wheel speed percentage
 float steer_pcnt = 0;	// Desired steering speed percentage
-int tempCount = 0;
-int tempCount2 = 0;
 bool alive = false;		// True if we have contact with mainframe
 int hbeat_cnt = 0;		// Counter of how many loops have passed since heartbeat
 const float iteration_time = 1.0/LOOP_HERTZ;	// Iteration time of the main loop
@@ -170,12 +168,12 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
         steer_mod[2] = 0;
         steer_mod[3] = 1;
         if(steer_pcnt>0) {
-          speedL = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)-(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100)); 
-          speedR = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)+(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100));
-		}
-        else {
           speedL = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)+(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100)); 
           speedR = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)-(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100));
+		}
+        else {
+          speedL = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)-(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100)); 
+          speedR = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)+(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100));
         }     
         req_RPM[0] = speedR;
         req_RPM[1] = speedL;
@@ -197,13 +195,13 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
 void encoders_cb(const rover::RPM::ConstPtr& msg)
 {   
     // Record data into array index respective to each wheel
-    //actual_RPM[0] = msg->rpm_fl;
-    //actual_RPM[1] = msg->rpm_fr; 
-    //actual_RPM[0] = msg->rpm_fr;
-    actual_RPM[0] = msg->rpm_fr;
-    actual_RPM[1] = msg->rpm_fl;
-    actual_RPM[2] = msg->rpm_bl; 
-    actual_RPM[3] = msg->rpm_fl; // encoder not working
+    actual_RPM[0] = msg->rpm_br;
+    actual_RPM[1] = msg->rpm_bl;
+	// encoders not working
+    //actual_RPM[2] = msg->rpm_fr; 
+	//actual_RPM[3] = msg->rpm_fl;
+    actual_RPM[2] = msg->rpm_br; 
+    actual_RPM[3] = msg->rpm_bl;
 }
 
 /***************************************************************************************************
@@ -254,11 +252,6 @@ int main(int argc, char **argv)
   // Skid steering modification
   bool skid_overlay[4] = {1, 1, 1, 1};    
 
-  // Values to reassign the skid overlay for turning on the spot
-  const bool skid_dir1[4] = {1, 0, 1, 0};
-  const bool skid_dir2[4] = {0, 1, 0, 1};
-  const bool skid_orig[4] = {1, 1, 1, 1};
-
   // PID variables
   
   float error[4] = {0,0,0,0};
@@ -267,8 +260,6 @@ int main(int argc, char **argv)
   float derivative[4] = {0,0,0,0};
   float output[4] = {0,0,0,0};
 
-  //int drive_pwm = 0; // Wheel PWMs when driving normally
-  int steer_pwm = 0; // Wheel PWMs when turning on the spot
   int drive_pwm[4] = {0,0,0,0};
 
 
@@ -318,16 +309,13 @@ int main(int argc, char **argv)
     // If no heartbeat, kill rover
     if (hbeat_cnt > hbeat_timeout) 
     {
-   	alive = false; 
-    	//ROS_INFO_STREAM("No heartbeat, killing rover :(");   
+   	    alive = false; 
    	}
 
     // Set new motor directions
     drive_dir = !(drive_pcnt < 0);
     steer_dir = !(steer_pcnt < 0);
 
-    // If no throttle, switch to "turning on the spot" mode
-   	//on_the_spot = fabs(drive_pcnt) < 0.2;
     for(int k=0;k<4;k++) 
     {
         error[k] = req_RPM[k] - actual_RPM[k];
@@ -339,18 +327,8 @@ int main(int argc, char **argv)
 
         drive_pwm[k] = MapRPMToPWM(round(actual_RPM[k]+output[k]));
     }
-    //drive_pwm[3] = MapRPMToPWM(req_RPM[3]);
+
 	
-
-    if(tempCount==3) {
-        //ROS_INFO_STREAM("INCREASING PWM");
-        
-        ROS_INFO_STREAM("Req RPM: " << req_RPM[0] << " Actual RPM: " << actual_RPM[0] << " Drive PWM: " << drive_pwm[0] << " Output: " << output[0] << " Integral: " << integral[0] << " Derivative: " << derivative[0] << " Error: " << error[0] << " itertationTime: " << iteration_time);
-
-		//ROS_INFO_STREAM("Req RPM: " << req_RPM[0] << " Actual RPM: " << actual_RPM[0];);
-        tempCount = 0;
-		//tempCount2++;
-    }
     if (!alive)
     {
       // Stop rover if dead
@@ -358,7 +336,6 @@ int main(int argc, char **argv)
       drive_pwm[1] = 0;
       drive_pwm[2] = 0;
       drive_pwm[3] = 0;
-      steer_pwm = 0;
     }
 
     for (int i = 0; i < 4; i++)
@@ -373,7 +350,7 @@ int main(int argc, char **argv)
       // Change wheel speed outputs
       pwmWrite(PIN_BASE + i, drive_pwm[i]); // pins of PWM board, (0, 1, 2, 3)
     }
-    tempCount++;
+
     hbeat_cnt++; // Increment heartbeat tracking timer
 
     ros::spinOnce();
