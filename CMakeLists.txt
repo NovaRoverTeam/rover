@@ -53,6 +53,8 @@ add_message_files(
   DriveCmd.msg
   ArmCmd.msg
   RPM.msg
+  Ball.msg
+  Person.msg
   #RawControl.msg
   #Command.msg
 )
