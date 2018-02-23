@@ -22,7 +22,10 @@
   <node name="serial_node_enc" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_enc)"/>
   <node name="serial_node_arm" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_arm)"/>
 
+
   <node name="gps" pkg="gps" type="gps" output="screen"/>
+  <node name="balltracker" type="TennisBallTracker.py" pkg="rover" />
+
 
   <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
   
