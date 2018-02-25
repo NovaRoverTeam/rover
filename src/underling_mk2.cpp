@@ -151,18 +151,19 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
     {
       drive_pcnt = msg->acc;              
       steer_pcnt = 100.0*(msg->steer)/45; // Store desired steering angle as %
+      
       if(fabs(drive_pcnt) < 0.2) {
         if(steer_pcnt<0) {
           steer_mod[0] = 0;
-          steer_mod[1] = 1;
-          steer_mod[2] = 1;
-          steer_mod[3] = 1;
-        }
-        else { 
-          steer_mod[0] = 1;
           steer_mod[1] = 0;
           steer_mod[2] = 0;
           steer_mod[3] = 0;
+        }
+        else { 
+          steer_mod[0] = 1;
+          steer_mod[1] = 1;
+          steer_mod[2] = 1;
+          steer_mod[3] = 1;
         }
         speedL = limit_drive*fabs((steer_pcnt*MAX_RPM)/100);      
         req_RPM[0] = speedL;
@@ -172,16 +173,17 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
       }
       else {
         steer_mod[0] = 1;
-        steer_mod[1] = 1;
-        steer_mod[2] = 0;
-        steer_mod[3] = 1;
+        steer_mod[1] = 0;
+        steer_mod[2] = 1;
+        steer_mod[3] = 0;
+
         if(steer_pcnt>0) {
-          speedL = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)+(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100)); 
-          speedR = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)-(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100));
-		}
-        else {
           speedL = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)-(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100)); 
           speedR = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)+(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100));
+		}
+        else {
+          speedL = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)+(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100)); 
+          speedR = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)-(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100));
         }     
         req_RPM[0] = speedR;
         req_RPM[1] = speedL;
@@ -203,13 +205,14 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
 void encoders_cb(const rover::RPM::ConstPtr& msg)
 {   
     // Record data into array index respective to each wheel
-    actual_RPM[0] = msg->rpm_br;
-    actual_RPM[1] = msg->rpm_bl;
-    actual_RPM[2] = msg->rpm_br; 
-    actual_RPM[3] = msg->rpm_bl;
-	// Encoders not working
-	//actual_RPM[2] = msg->rpm_fr;
-	//actual_RPM[3] = msg->rpm_fl;
+    actual_RPM[0] = msg->rpm_fl;
+    actual_RPM[1] = msg->rpm_br;
+    //actual_RPM[2] = msg->rpm_br; 
+    //actual_RPM[3] = msg->rpm_bl;
+
+    // Encoders not working
+    actual_RPM[2] = msg->rpm_bl;
+    actual_RPM[3] = msg->rpm_fr;
 }
 
 /***************************************************************************************************
@@ -271,7 +274,7 @@ int main(int argc, char **argv)
                            B_R_DIR_PIN};  
 
   // To correct the motor directions
-  const bool correction[4] = {1, 1, 0, 1}; 
+  const bool correction[4] = {0, 0, 0, 0}; 
 
   // Translates boolean directions to neg pos directions
   const float dirs[2] = {-1.0, 1.0};
@@ -334,10 +337,10 @@ int main(int argc, char **argv)
   while (ros::ok())
   {
     // Check heartbeat, voltage levels and decide whether to kill the rover
-    if (!hbeat || !volt_ok)
+    //if (!hbeat || !volt_ok)
+    if(!hbeat)
     {
       alive = false;
-      ROS_INFO_STREAM("NO HBEAT OR VOLTAGE NOT OK");
     }
     else
     {
@@ -370,10 +373,9 @@ int main(int argc, char **argv)
       drive_pwm[2] = 0;
       drive_pwm[3] = 0;
     }
-
     for (int i = 0; i < 4; i++)
     {
-      bool direction = (correction[i] != drive_dir);
+      bool direction; // = (correction[i] != drive_dir);
       direction = (steer_mod[i] != drive_dir);
 
       // If skid steering command requires opposite direction, switch	

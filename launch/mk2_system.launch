@@ -17,7 +17,7 @@
   <include file="$(find comms)/launch/rover_comms.launch"/>
   -->
 
-  <node name="underling" pkg="rover" type="underling" output="screen" args="$(arg lim_drive) $(arg lim_steer) $(arg max_steer_mod)"/>
+  <node name="underling_mk2" pkg="rover" type="underling_mk2" output="screen" args="$(arg lim_drive) $(arg lim_steer) $(arg max_steer_mod)"/>
 
   <node name="serial_node_enc" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_enc)"/>
   <node name="serial_node_arm" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_arm)"/>
