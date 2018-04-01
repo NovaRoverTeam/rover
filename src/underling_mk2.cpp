@@ -46,7 +46,7 @@ using namespace std;
 #define PIN_BASE 160
 #define PWM_HERTZ 1000
 #define MAX_PWM 4096 // Max PWM of pca9685
-#define MAX_RPM 128 // Experimentally obtained max RPM
+#define MAX_RPM 97 // Experimentally obtained max RPM
 
 // Pin definitions for direction-changing GPIOs
 #define B_L_DIR_PIN 4 // 23
@@ -108,7 +108,7 @@ int MapRPMToPWM(float RPM)
   int PWM;
   if(RPM > 0) 
   {
-    PWM = round((RPM + 3.744653)/0.03281);	// Determined by plotting PWM vs. RPM and obtaining the line of best fit
+    PWM = round((RPM + 2.1958473929)/0.02459147);	// Determined by plotting PWM vs. RPM and obtaining the line of best fit
     PWM = clamp(PWM, MAX_PWM, 0);	// Clamp PWM to valid value
   }
   else PWM = 0;
@@ -172,8 +172,8 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
         req_RPM[3] = speedL;
       }
       else {
-        steer_mod[0] = 1;
-        steer_mod[1] = 0;
+        steer_mod[0] = 0;
+        steer_mod[1] = 1;
         steer_mod[2] = 1;
         steer_mod[3] = 0;
 
@@ -186,8 +186,8 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
           speedR = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)-(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100));
         }     
         req_RPM[0] = speedR;
-        req_RPM[1] = speedL;
-        req_RPM[2] = speedR;
+        req_RPM[1] = speedR;
+        req_RPM[2] = speedL;
         req_RPM[3] = speedL;
       }
     }
@@ -337,8 +337,7 @@ int main(int argc, char **argv)
   while (ros::ok())
   {
     // Check heartbeat, voltage levels and decide whether to kill the rover
-    //if (!hbeat || !volt_ok)
-    if(!hbeat)
+    if (!hbeat || !volt_ok)
     {
       alive = false;
     }
