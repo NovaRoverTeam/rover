@@ -52,7 +52,9 @@ add_message_files(
   FILES
   DriveCmd.msg
   ArmCmd.msg
+  RedCmd.msg
   RPM.msg
+  Voltages.msg
   #RawControl.msg
   #Command.msg
 )

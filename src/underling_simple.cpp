@@ -150,7 +150,7 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
     if (alive)
     {
       drive_pcnt = msg->acc;              
-      steer_pcnt = 100.0*(msg->steer)/45; // Store desired steering angle as %
+      steer_pcnt = msg->steer; // Store desired steering angle as %
       if(fabs(drive_pcnt) < 0.2) {
         if(steer_pcnt<0) {
           steer_mod[0] = 0;
