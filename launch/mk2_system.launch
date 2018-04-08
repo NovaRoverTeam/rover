@@ -22,6 +22,8 @@
   <node name="serial_node_enc" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_enc)"/>
   <node name="serial_node_arm" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_arm)"/>
 
+	<node name="glen" pkg="autopilot" type="glen.py" output="screen"/>
+	<node name="autopilot" pkg="autopilot" type="autopilot" output="screen"/>
 
   <node name="gps" pkg="gps" type="gps" output="screen"/>
   <node name="balltracker" type="TennisBallTracker.py" pkg="rover" />
