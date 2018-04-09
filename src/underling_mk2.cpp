@@ -32,6 +32,7 @@ using namespace std;
 #include <rover/RPM.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Float32.h>
+#include <rover/Voltages.h>
 
 // __________________________Definitions___________________________
 #define LOOP_HERTZ 50 // Main control loop rate
@@ -147,8 +148,10 @@ int rollover(int value, int max, int min)
 void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
 {    
     int speedL, speedR;
+    //ROS_INFO("cb received\n");
     if (alive)
     {
+      //ROS_INFO("alive\n");
       drive_pcnt = msg->acc;              
       steer_pcnt = 100.0*(msg->steer)/45; // Store desired steering angle as %
       
@@ -237,15 +240,16 @@ void hbeat_cb(const std_msgs::Empty::ConstPtr& msg)
 * The callback function for the subscription to the voltage from the Arduino Pro Micro.
 *
 ***************************************************************************************************/
-void voltage_cb(const std_msgs::Float32::ConstPtr& msg)
+void voltage_cb(const rover::Voltages::ConstPtr& msg)
 {
+  /*
   if (msg->data < MIN_VOLTAGE)
   {
     volt_ok = false;
     ROS_INFO_STREAM("DANGEROUS VOLTAGE LEVEL REACHED ** BEE-BAH **");   
   }
   else
-    volt_ok = true;
+    volt_ok = true; */
 }
 
 
@@ -337,7 +341,8 @@ int main(int argc, char **argv)
   while (ros::ok())
   {
     // Check heartbeat, voltage levels and decide whether to kill the rover
-    if (!hbeat || !volt_ok)
+    //if (!hbeat || !volt_ok)
+    if (!hbeat)
     {
       alive = false;
     }
@@ -362,6 +367,7 @@ int main(int argc, char **argv)
         integral[k] = fclamp(integral[k], 25.0, -25.0);
 
         drive_pwm[k] = MapRPMToPWM(round(actual_RPM[k]+output[k]));
+       
     }
 	
     if (!alive)
