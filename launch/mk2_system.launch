@@ -24,7 +24,6 @@
   <node name="serial_node_arm" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_arm)"/>
   <node name="serial_node_drill" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_drill)"/>
 
-	<node name="glen" pkg="autopilot" type="glen.py" output="screen"/>
 	<node name="autopilot" pkg="autopilot" type="autopilot" output="screen"/>
 
   <node name="gps" pkg="gps" type="gps" output="screen"/>
