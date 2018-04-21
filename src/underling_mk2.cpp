@@ -47,7 +47,8 @@ using namespace std;
 #define PIN_BASE 160
 #define PWM_HERTZ 1000
 #define MAX_PWM 4096 // Max PWM of pca9685
-#define MAX_RPM 97 // Experimentally obtained max RPM
+//#define MAX_RPM 97 // OLD Experimentally obtained max RPM
+#define MAX_RPM 128
 
 // Pin definitions for direction-changing GPIOs
 #define B_L_DIR_PIN 4 // 23
@@ -74,7 +75,7 @@ const float iteration_time = 1.0/LOOP_HERTZ;	// Iteration time of the main loop
 
 int req_RPM[4] = {0,0,0,0};		// The RPM values which are desired for each wheel
 int actual_RPM[4] = {0,0,0,0}; 	// The RPM values for each wheel as reported by the Arduino
-int steer_mod[4] = {0,1,1,0};
+int steer_mod[4] = {0,0,1,0};
 float MAX_STEER_MOD = 0.5;
 
 /***************************************************************************************************
@@ -109,7 +110,8 @@ int MapRPMToPWM(float RPM)
   int PWM;
   if(RPM > 0) 
   {
-    PWM = round((RPM + 2.1958473929)/0.02459147);	// Determined by plotting PWM vs. RPM and obtaining the line of best fit
+    //PWM = round((RPM + 2.1958473929)/0.02459147);	OLD Determined by plotting PWM vs. RPM and obtaining the line of best fit
+    PWM = round((RPM + 3.744653)/0.03281);
     PWM = clamp(PWM, MAX_PWM, 0);	// Clamp PWM to valid value
   }
   else PWM = 0;
@@ -153,18 +155,18 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
     {
       //ROS_INFO("alive\n");
       drive_pcnt = msg->acc;              
-      steer_pcnt = 100.0*(msg->steer)/45; // Store desired steering angle as %
+      steer_pcnt = msg->steer; // Store desired steering angle as %
       
       if(fabs(drive_pcnt) < 0.2) {
         if(steer_pcnt<0) {
           steer_mod[0] = 0;
-          steer_mod[1] = 0;
+          steer_mod[1] = 1;
           steer_mod[2] = 0;
           steer_mod[3] = 0;
         }
         else { 
           steer_mod[0] = 1;
-          steer_mod[1] = 1;
+          steer_mod[1] = 0;
           steer_mod[2] = 1;
           steer_mod[3] = 1;
         }
@@ -176,7 +178,7 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
       }
       else {
         steer_mod[0] = 0;
-        steer_mod[1] = 1;
+        steer_mod[1] = 0;
         steer_mod[2] = 1;
         steer_mod[3] = 0;
 
@@ -192,6 +194,7 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
         req_RPM[1] = speedR;
         req_RPM[2] = speedL;
         req_RPM[3] = speedL;
+        //ROS_INFO_STREAM(req_RPM[0] << ' ' << req_RPM[1] << ' ' << req_RPM[2] << ' ' << req_RPM[3]);
       }
     }
 }
@@ -208,14 +211,16 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
 void encoders_cb(const rover::RPM::ConstPtr& msg)
 {   
     // Record data into array index respective to each wheel
-    actual_RPM[0] = msg->rpm_fl;
+    //actual_RPM[0] = msg->rpm_fl;
+    actual_RPM[0] = msg->rpm_br;
     actual_RPM[1] = msg->rpm_br;
     //actual_RPM[2] = msg->rpm_br; 
     //actual_RPM[3] = msg->rpm_bl;
 
     // Encoders not working
     actual_RPM[2] = msg->rpm_bl;
-    actual_RPM[3] = msg->rpm_fr;
+    actual_RPM[3] = msg->rpm_bl;
+    //actual_RPM[3] = msg->rpm_fr;
 }
 
 /***************************************************************************************************
