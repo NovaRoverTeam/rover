@@ -33,6 +33,7 @@ using namespace std;
 #include <std_msgs/Empty.h>
 #include <std_msgs/Float32.h>
 #include <rover/Voltages.h>
+#include <rover/ReqRPM.h>
 
 // __________________________Definitions___________________________
 #define LOOP_HERTZ 50 // Main control loop rate
@@ -156,7 +157,7 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
       //ROS_INFO("alive\n");
       drive_pcnt = msg->acc;              
       steer_pcnt = msg->steer; // Store desired steering angle as %
-      
+            
       if(fabs(drive_pcnt) < 0.2) {
         if(steer_pcnt<0) {
           steer_mod[0] = 0;
@@ -270,6 +271,7 @@ int main(int argc, char **argv)
   ros::Subscriber encoders_sub = n.subscribe("encoders", 5, encoders_cb);	
   ros::Subscriber hbeat_sub = n.subscribe("hbeat", 1, hbeat_cb);	
   ros::Subscriber voltage_sub = n.subscribe("voltage", 1, voltage_cb);	
+  ros::Publisher reqRPM_pub = n.advertise<rover::ReqRPM>("req_rpm", 4);
 
   // If no heartbeat for 2 seconds, rover dies
   const int hbeat_timeout = 2*LOOP_HERTZ;
@@ -374,6 +376,13 @@ int main(int argc, char **argv)
         drive_pwm[k] = MapRPMToPWM(round(actual_RPM[k]+output[k]));
        
     }
+
+    rover::ReqRPM msg;
+    msg.req_rpm_fl = req_RPM[0];
+    msg.req_rpm_fr = req_RPM[1];
+    msg.req_rpm_bl = req_RPM[2];
+    msg.req_rpm_br = req_RPM[3];
+    reqRPM_pub.publish(msg);
 	
     if (!alive)
     {

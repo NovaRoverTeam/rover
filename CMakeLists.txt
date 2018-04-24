@@ -54,6 +54,7 @@ add_message_files(
   ArmCmd.msg
   RedCmd.msg
   RPM.msg
+  ReqRPM.msg
   Voltages.msg
   #RawControl.msg
   #Command.msg
