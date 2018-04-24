@@ -1,0 +1,26 @@
+<launch>
+
+  <arg name="lim_drive"     default="0.3"/>
+  <arg name="lim_steer"     default="0.5"/>
+  <arg name="max_steer_mod" default="0.5"/>
+  <arg name="duino_enc"     default="/dev/ttyACM0"/> 
+
+  <node name="underling_mk2" pkg="rover" type="underling_mk2" output="screen" args="$(arg lim_drive) $(arg lim_steer) $(arg max_steer_mod)"/>
+
+  <node name="serial_node_enc" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_enc)"/>
+
+	<node name="autopilot" pkg="autopilot" type="autopilot" output="screen"/>
+
+  <!-- Fake lat/long is for the location of the workshop. -->
+	<include file="$(find autopilot)/launch/autopilot.launch">
+		<arg name="disable_lidar" value="1"/>
+	</include>
+
+  <!-- Fake lat/long is for the location of the workshop. -->
+	<include file="$(find gps)/launch/gps.launch">
+		<arg name="use_fake"   value="1"          />
+  	<arg name="fake_lat"   value="-37.9089064"/>
+  	<arg name="fake_long"  value="145.1338591"/>
+	</include>
+  
+</launch>
