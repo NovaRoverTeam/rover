@@ -1,5 +1,12 @@
 <launch>
 
+  <!-- IP addresses for 5.8 GHz radios -->
+  <arg name="master5" value = "http://192.168.1.199:11311"/>
+  <arg name="ip5"     value = "192.168.1.199"/>
+
+  <env name="ROS_MASTER_URI" value="$(arg master5)"/>
+  <env name="ROS_IP"         value="$(arg ip5)"    />
+  
   <arg name="lim_drive"     default="0.3"/>
   <arg name="lim_steer"     default="0.5"/>
   <arg name="max_steer_mod" default="0.5"/>
