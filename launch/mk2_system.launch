@@ -19,6 +19,7 @@
 
   <node name="gps" pkg="gps" type="gps" output="screen"/>
   <node name="balltracker" type="TennisBallTracker.py" pkg="rover" />
+  <node name="sanity" pkg="sanity" type="sanity" output="screen"/>
 
   <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
   

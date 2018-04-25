@@ -24,6 +24,7 @@
 #include <algorithm> // ?
 #include <iostream>
 #include <wiringPi.h>
+#include <string>
 #include "pca9685/src/pca9685.h" // PWM board library
 using namespace std;
 
@@ -239,7 +240,7 @@ int main(int argc, char **argv)
   // ********************* ROS ************************* //
 
   ros::init(argc, argv, "underling");
-  ros::NodeHandle n;
+  ros::NodeHandle n("~");
   ros::Rate loop_rate(LOOP_HERTZ);
 
   ros::Subscriber drivecmd_sub = n.subscribe("cmd_data", 5, cmd_data_cb);
@@ -277,7 +278,7 @@ int main(int argc, char **argv)
 
   int drive_pwm[4] = {0,0,0,0};
 
-
+  string state;
   bool drive_dir = 1; // Wheel direction
   bool steer_dir = 0.5; // Steering direction
   bool on_the_spot = 0; //Steering on the spot?
@@ -349,6 +350,17 @@ int main(int argc, char **argv)
     msg.req_rpm_bl = req_RPM[2];
     msg.req_rpm_br = req_RPM[3];
     reqRPM_pub.publish(msg);
+    
+    n.getParam("STATE", state);
+    ROS_INFO_STREAM(state);
+    if(state == "STANDBY")
+    {
+        ROS_INFO_STREAM("STATE SET TO STANDBY - SETTING PWM TO 0");
+        drive_pwm[0] = 0;
+        drive_pwm[1] = 0;
+        drive_pwm[2] = 0;
+        drive_pwm[3] = 0;
+    }
 
     for (int i = 0; i < 4; i++)
     {

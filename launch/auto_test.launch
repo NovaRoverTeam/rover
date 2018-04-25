@@ -9,8 +9,6 @@
 
   <node name="serial_node_enc" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_enc)"/>
 
-	<node name="autopilot" pkg="autopilot" type="autopilot" output="screen"/>
-
   <!-- Fake lat/long is for the location of the workshop. -->
 	<include file="$(find autopilot)/launch/autopilot.launch">
 		<arg name="disable_lidar" value="1"/>
@@ -22,5 +20,8 @@
   	<arg name="fake_lat"   value="-37.9089064"/>
   	<arg name="fake_long"  value="145.1338591"/>
 	</include>
-  
+
+	<include file="$(find urg_node)/launch/urg_lidar.launch"/>
+	<node name="bearing" pkg="rtimulib_ros" type="rtimulib_ros" output="screen"/>
+
 </launch>
