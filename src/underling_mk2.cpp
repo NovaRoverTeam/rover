@@ -30,7 +30,6 @@ using namespace std;
 // __________________________ROS includes__________________________
 #include <rover/DriveCmd.h>
 #include <rover/RPM.h>
-#include <std_msgs/Empty.h>
 #include <std_msgs/Float32.h>
 #include <rover/Voltages.h>
 #include <rover/ReqRPM.h>
@@ -65,12 +64,7 @@ float limit_steer = 0;
 float drive_pcnt = 0;	// Desired wheel speed percentage
 float steer_pcnt = 0;	// Desired steering speed percentage
 
-
-bool alive = false;		// False means rover ceases movement, either radio loss or low battery
-bool hbeat = false;   // Do we have a heartbeat?
 bool volt_ok = false; // Is voltage level okay?
-
-int hbeat_cnt = 0;		// Counter of how many loops have passed since heartbeat
 
 const float iteration_time = 1.0/LOOP_HERTZ;	// Iteration time of the main loop
 
@@ -150,10 +144,8 @@ int rollover(int value, int max, int min)
 ***************************************************************************************************/
 void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
 {    
-    int speedL, speedR;
+       int speedL, speedR;
     //ROS_INFO("cb received\n");
-    if (alive)
-    {
       //ROS_INFO("alive\n");
       drive_pcnt = msg->acc;              
       steer_pcnt = msg->steer; // Store desired steering angle as %
@@ -197,7 +189,6 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
         req_RPM[3] = speedL;
         //ROS_INFO_STREAM(req_RPM[0] << ' ' << req_RPM[1] << ' ' << req_RPM[2] << ' ' << req_RPM[3]);
       }
-    }
 }
 
 /***************************************************************************************************
@@ -222,22 +213,6 @@ void encoders_cb(const rover::RPM::ConstPtr& msg)
     actual_RPM[2] = msg->rpm_bl;
     actual_RPM[3] = msg->rpm_bl;
     //actual_RPM[3] = msg->rpm_fr;
-}
-
-/***************************************************************************************************
-* HEARTBEAT CALLBACK FUNCTION
-*
-* The callback function for the subscription to the heartbeat from the mainframe. This function is 
-* called whenever a new heartbeat is sent from the mainframe.
-*
-* Whenever a new heartbeat is received from the mainframe, this means that the rover can still communicate
-* with the mainframe. The mainframe can still
-* Input:	const rover::DriveCmd::ConstPtr& msg - The message object containing the relevent data.
-***************************************************************************************************/
-void hbeat_cb(const std_msgs::Empty::ConstPtr& msg)
-{
-  hbeat = true;
-  hbeat_cnt = 0;
 }
 
 /***************************************************************************************************
@@ -268,8 +243,7 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(LOOP_HERTZ);
 
   ros::Subscriber drivecmd_sub = n.subscribe("cmd_data", 5, cmd_data_cb);
-  ros::Subscriber encoders_sub = n.subscribe("encoders", 5, encoders_cb);	
-  ros::Subscriber hbeat_sub = n.subscribe("hbeat", 1, hbeat_cb);	
+  ros::Subscriber encoders_sub = n.subscribe("encoders", 5, encoders_cb);		
   ros::Subscriber voltage_sub = n.subscribe("voltage", 1, voltage_cb);	
   ros::Publisher reqRPM_pub = n.advertise<rover::ReqRPM>("req_rpm", 4);
 
@@ -349,14 +323,6 @@ int main(int argc, char **argv)
   {
     // Check heartbeat, voltage levels and decide whether to kill the rover
     //if (!hbeat || !volt_ok)
-    if (!hbeat)
-    {
-      alive = false;
-    }
-    else
-    {
-      alive = true;
-    }
 
     // Set new motor directions
     drive_dir = !(drive_pcnt < 0);
@@ -383,15 +349,7 @@ int main(int argc, char **argv)
     msg.req_rpm_bl = req_RPM[2];
     msg.req_rpm_br = req_RPM[3];
     reqRPM_pub.publish(msg);
-	
-    if (!alive)
-    {
-      // Stop rover if dead
-      drive_pwm[0] = 0;
-      drive_pwm[1] = 0;
-      drive_pwm[2] = 0;
-      drive_pwm[3] = 0;
-    }
+
     for (int i = 0; i < 4; i++)
     {
       bool direction; // = (correction[i] != drive_dir);
@@ -404,15 +362,6 @@ int main(int argc, char **argv)
       // Change wheel speed outputs
       pwmWrite(PIN_BASE + i, drive_pwm[i]); // pins of PWM board, (0, 1, 2, 3)
     }
-
-      // If no heartbeat, kill rover
-    if (hbeat_cnt > hbeat_timeout) 
-    {
-      hbeat = false;
-    	//ROS_INFO_STREAM("No heartbeat, killing rover :(");   
-   	}
-
-    hbeat_cnt++; // Increment heartbeat tracking timer
 
     ros::spinOnce();
     loop_rate.sleep();
