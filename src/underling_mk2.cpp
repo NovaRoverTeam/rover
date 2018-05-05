@@ -73,6 +73,7 @@ int req_RPM[4] = {0,0,0,0};		// The RPM values which are desired for each wheel
 int actual_RPM[4] = {0,0,0,0}; 	// The RPM values for each wheel as reported by the Arduino
 int steer_mod[4] = {0,0,1,0};
 float MAX_STEER_MOD = 0.5;
+int shits_printed = 0;
 
 /***************************************************************************************************
 * CLAMP FUNCTION
@@ -240,12 +241,12 @@ int main(int argc, char **argv)
   // ********************* ROS ************************* //
 
   ros::init(argc, argv, "underling");
-  ros::NodeHandle n("~");
+  ros::NodeHandle n;
   ros::Rate loop_rate(LOOP_HERTZ);
 
   ros::Subscriber drivecmd_sub = n.subscribe("cmd_data", 5, cmd_data_cb);
-  ros::Subscriber encoders_sub = n.subscribe("encoders", 5, encoders_cb);		
-  ros::Subscriber voltage_sub = n.subscribe("voltage", 1, voltage_cb);	
+  ros::Subscriber encoders_sub = n.subscribe("/encoders", 5, encoders_cb);		
+  ros::Subscriber voltage_sub = n.subscribe("/voltage", 1, voltage_cb);	
   ros::Publisher reqRPM_pub = n.advertise<rover::ReqRPM>("req_rpm", 4);
 
   // If no heartbeat for 2 seconds, rover dies
@@ -350,16 +351,24 @@ int main(int argc, char **argv)
     msg.req_rpm_bl = req_RPM[2];
     msg.req_rpm_br = req_RPM[3];
     reqRPM_pub.publish(msg);
-    
-    n.getParam("STATE", state);
-    ROS_INFO_STREAM(state);
+   
+    n.getParam("/STATE", state);
+    //ROS_INFO_STREAM(state);
     if(state == "STANDBY")
     {
-        ROS_INFO_STREAM("STATE SET TO STANDBY - SETTING PWM TO 0");
-        drive_pwm[0] = 0;
-        drive_pwm[1] = 0;
-        drive_pwm[2] = 0;
-        drive_pwm[3] = 0;
+        if(shits_printed < 50)
+        {
+            shits_printed++;
+        }
+        else
+        {
+            ROS_INFO_STREAM("STATE SET TO STANDBY - SETTING PWM TO 0");
+            drive_pwm[0] = 0;
+            drive_pwm[1] = 0;
+            drive_pwm[2] = 0;
+            drive_pwm[3] = 0;
+            shits_printed = 0;
+         }
     }
 
     for (int i = 0; i < 4; i++)

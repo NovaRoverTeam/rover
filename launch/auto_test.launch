@@ -1,18 +1,13 @@
 <launch>
-
-  <!-- IP addresses for 5.8 GHz radios -->
-  <arg name="master5" value = "http://192.168.1.199:11311"/>
-  <arg name="ip5"     value = "192.168.1.199"/>
-
-  <env name="ROS_MASTER_URI" value="$(arg master5)"/>
-  <env name="ROS_IP"         value="$(arg ip5)"    />
-  
+ 
   <arg name="lim_drive"     default="0.3"/>
   <arg name="lim_steer"     default="0.5"/>
   <arg name="max_steer_mod" default="0.5"/>
   <arg name="duino_enc"     default="/dev/ttyACM0"/> 
 
   <node name="underling_mk2" pkg="rover" type="underling_mk2" output="screen" args="$(arg lim_drive) $(arg lim_steer) $(arg max_steer_mod)"/>
+
+  <node name="sanity" pkg="sanity" type="sanity" output="screen"/>
 
   <node name="serial_node_enc" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_enc)"/>
 
@@ -23,12 +18,12 @@
 
   <!-- Fake lat/long is for the location of the workshop. -->
 	<include file="$(find gps)/launch/gps.launch">
-		<arg name="use_fake"   value="1"          />
-  	<arg name="fake_lat"   value="-37.9089064"/>
-  	<arg name="fake_long"  value="145.1338591"/>
+	  <arg name="use_fake"   value="1"          />
+	  <arg name="fake_lat"   value="-37.9089064"/>
+	  <arg name="fake_long"  value="145.1338591"/>
 	</include>
 
-	<include file="$(find urg_node)/launch/urg_lidar.launch"/>
+	<!-- <include file="$(find urg_node)/launch/urg_lidar.launch"/> -->
 	<node name="bearing" pkg="rtimulib_ros" type="rtimulib_ros" output="screen"/>
 
 </launch>
