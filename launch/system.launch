@@ -15,7 +15,13 @@
 
   <!-- <node name="autopilot" pkg="autopilot" type="autopilot" output="screen"/> -->
 
-  <node name="gps" pkg="gps" type="gps" output="screen"/>
+  <!-- Fake lat/long is for the location of the workshop. -->
+        <include file="$(find gps)/launch/gps.launch">
+          <arg name="use_fake"   value="1"          />
+          <arg name="fake_lat"   value="-37.9089064"/>
+          <arg name="fake_long"  value="145.1338591"/>
+        </include>
+
   <node name="balltracker" type="TennisBallTracker.py" pkg="rover" />
   <node name="sanity" pkg="sanity" type="sanity" output="screen"/>
 

@@ -356,6 +356,11 @@ int main(int argc, char **argv)
     //ROS_INFO_STREAM(state);
     if(state == "STANDBY")
     {
+	    drive_pwm[0] = 0;
+        drive_pwm[1] = 0;
+        drive_pwm[2] = 0;
+        drive_pwm[3] = 0;
+
         if(shits_printed < 50)
         {
             shits_printed++;
@@ -363,10 +368,6 @@ int main(int argc, char **argv)
         else
         {
             ROS_INFO_STREAM("STATE SET TO STANDBY - SETTING PWM TO 0");
-            drive_pwm[0] = 0;
-            drive_pwm[1] = 0;
-            drive_pwm[2] = 0;
-            drive_pwm[3] = 0;
             shits_printed = 0;
          }
     }
