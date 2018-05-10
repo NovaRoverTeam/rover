@@ -12,18 +12,14 @@
   <node name="serial_node_enc" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_enc)"/>
 
   <!-- Fake lat/long is for the location of the workshop. -->
-	<include file="$(find autopilot)/launch/autopilot.launch">
-		<arg name="disable_lidar" value="1"/>
-	</include>
-
+  <include file="$(find autopilot)/launch/autopilot.launch"/>
   <!-- Fake lat/long is for the location of the workshop. -->
-	<include file="$(find gps)/launch/gps.launch">
-	  <arg name="use_fake"   value="1"          />
-	  <arg name="fake_lat"   value="-37.9089064"/>
-	  <arg name="fake_long"  value="145.1338591"/>
-	</include>
+  <node name="gps" pkg="gps" type="gps" output="screen"/>
+  
+  <include file="$(find urg_node)/launch/urg_lidar.launch"/> 
+  
+  <node name="bearing" pkg="rtimulib_ros" type="rtimulib_ros" output="screen"/>
 
-	<!-- <include file="$(find urg_node)/launch/urg_lidar.launch"/> -->
-	<node name="bearing" pkg="rtimulib_ros" type="rtimulib_ros" output="screen"/>
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
 
 </launch>

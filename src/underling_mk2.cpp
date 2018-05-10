@@ -1,3 +1,5 @@
+#define pwm_lol 2500
+
 /****************************************************************************************
  *  NOVA ROVER TEAM - URC2018
  *  This is the code executed onboard the rover to manage all driving-related aspects,
@@ -26,6 +28,7 @@
 #include <wiringPi.h>
 #include <string>
 #include "pca9685/src/pca9685.h" // PWM board library
+#include <signal.h>
 using namespace std;
 
 // __________________________ROS includes__________________________
@@ -58,6 +61,9 @@ using namespace std;
 #define B_R_DIR_PIN 24 // 19
 #define F_STR_PIN 27 // 16
 #define B_STR_PIN 28 // 20
+
+#define ACTUATOR_1_PIN 22 // 6
+#define ACTUATOR_2_PIN 25 // 26
 
 // Global variables
 float limit_drive = 0;
@@ -108,7 +114,7 @@ int MapRPMToPWM(float RPM)
   if(RPM > 0) 
   {
     //PWM = round((RPM + 2.1958473929)/0.02459147);	OLD Determined by plotting PWM vs. RPM and obtaining the line of best fit
-    PWM = round((RPM + 3.744653)/0.03281);
+    PWM = round((RPM + 1.0776808965)/0.0287579686);
     PWM = clamp(PWM, MAX_PWM, 0);	// Clamp PWM to valid value
   }
   else PWM = 0;
@@ -154,16 +160,16 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
             
       if(fabs(drive_pcnt) < 0.2) {
         if(steer_pcnt<0) {
-          steer_mod[0] = 0;
-          steer_mod[1] = 1;
-          steer_mod[2] = 0;
-          steer_mod[3] = 0;
-        }
-        else { 
           steer_mod[0] = 1;
-          steer_mod[1] = 0;
+          steer_mod[1] = 1;
           steer_mod[2] = 1;
           steer_mod[3] = 1;
+        }
+        else { 
+          steer_mod[0] = 0;
+          steer_mod[1] = 0;
+          steer_mod[2] = 0;
+          steer_mod[3] = 0;
         }
         speedL = limit_drive*fabs((steer_pcnt*MAX_RPM)/100);      
         req_RPM[0] = speedL;
@@ -172,10 +178,10 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
         req_RPM[3] = speedL;
       }
       else {
-        steer_mod[0] = 0;
+        steer_mod[0] = 1;
         steer_mod[1] = 0;
-        steer_mod[2] = 1;
-        steer_mod[3] = 0;
+        steer_mod[2] = 0;
+        steer_mod[3] = 1;
 
         if(steer_pcnt>0) {
           speedL = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)-(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100)); 
@@ -205,16 +211,17 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
 void encoders_cb(const rover::RPM::ConstPtr& msg)
 {   
     // Record data into array index respective to each wheel
-    //actual_RPM[0] = msg->rpm_fl;
-    actual_RPM[0] = msg->rpm_br;
-    actual_RPM[1] = msg->rpm_br;
+    actual_RPM[1] = msg->rpm_fl;
+    //actual_RPM[0] = msg->rpm_br;
+    
+    actual_RPM[3] = msg->rpm_br;
     //actual_RPM[2] = msg->rpm_br; 
     //actual_RPM[3] = msg->rpm_bl;
 
     // Encoders not working
-    actual_RPM[2] = msg->rpm_bl;
-    actual_RPM[3] = msg->rpm_bl;
-    //actual_RPM[3] = msg->rpm_fr;
+    actual_RPM[0] = msg->rpm_bl;
+    //actual_RPM[3] = msg->rpm_bl;
+    actual_RPM[2] = msg->rpm_fr;
 }
 
 /***************************************************************************************************
@@ -235,6 +242,28 @@ void voltage_cb(const rover::Voltages::ConstPtr& msg)
     volt_ok = true; */
 }
 
+void limit_drive_cb(const std_msgs::Float32::ConstPtr& msg)
+{
+    limit_drive = fclamp(msg->data,1.0,0.0);
+    ROS_INFO_STREAM("SETTING SPEED LIMIT TO " << (limit_drive*100) << "%");
+
+}
+
+
+//--**--..--**--..--**--..--**--..--**--..--**--..--**--..--**--..--**--
+// SigintHandler:
+//    Overrides the default ROS sigint handler for Ctrl+C.
+//--..--**--..--**--..--**--..--**--..--**--..--**--..--**--..--**--..--
+void SigintHandler(int sig)
+{
+  // Disable power to the actuators
+  digitalWrite (ACTUATOR_1_PIN, 0);
+  digitalWrite (ACTUATOR_2_PIN, 0);
+
+  // All the default sigint handler does is call shutdown()
+  ros::shutdown();
+}
+
 
 int main(int argc, char **argv)
 {
@@ -246,8 +275,12 @@ int main(int argc, char **argv)
 
   ros::Subscriber drivecmd_sub = n.subscribe("cmd_data", 5, cmd_data_cb);
   ros::Subscriber encoders_sub = n.subscribe("/encoders", 5, encoders_cb);		
-  ros::Subscriber voltage_sub = n.subscribe("/voltage", 1, voltage_cb);	
+  ros::Subscriber voltage_sub = n.subscribe("/voltage", 1, voltage_cb);
+  ros::Subscriber limit_drive_sub = n.subscribe("/limit_drive", 1, limit_drive_cb);
   ros::Publisher reqRPM_pub = n.advertise<rover::ReqRPM>("req_rpm", 4);
+
+  // Override the default ros sigint handler.
+  signal(SIGINT, SigintHandler);
 
   // If no heartbeat for 2 seconds, rover dies
   const int hbeat_timeout = 2*LOOP_HERTZ;
@@ -318,13 +351,23 @@ int main(int argc, char **argv)
   pinMode (B_STR_PIN, OUTPUT);
   digitalWrite (B_STR_PIN, steer_dir);
   digitalWrite (F_STR_PIN, !steer_dir);
+
+  // Enable power to the actuators
+  pinMode(ACTUATOR_1_PIN, OUTPUT);
+  pinMode(ACTUATOR_2_PIN, OUTPUT);
+  digitalWrite (ACTUATOR_1_PIN, 1);
+  digitalWrite (ACTUATOR_2_PIN, 1);
+
   ros::Duration(5).sleep();
+
   // ****************** MAIN LOOP *************************** //
 
   while (ros::ok())
   {
     // Check heartbeat, voltage levels and decide whether to kill the rover
     //if (!hbeat || !volt_ok)
+
+    //pwmWrite(PIN_BASE + 1, pwm_lol); // force pwm
 
     // Set new motor directions
     drive_dir = !(drive_pcnt < 0);

@@ -7,6 +7,8 @@
   <arg name="duino_arm" default="/dev/ttyUSB0"/> 
   <arg name="duino_drill" default="/dev/ttyUSB1"/> 
 
+  <env name='ROS_IP' value='10.0.5.2'/>
+
   <node name="underling_mk2" pkg="rover" type="underling_mk2" output="screen" args="$(arg lim_drive) $(arg lim_steer) $(arg max_steer_mod)"/>
 
   <node name="serial_node_enc" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_enc)"/>
@@ -15,16 +17,13 @@
 
   <!-- <node name="autopilot" pkg="autopilot" type="autopilot" output="screen"/> -->
 
-  <!-- Fake lat/long is for the location of the workshop. -->
-        <include file="$(find gps)/launch/gps.launch">
-          <arg name="use_fake"   value="1"          />
-          <arg name="fake_lat"   value="-37.9089064"/>
-          <arg name="fake_long"  value="145.1338591"/>
-        </include>
+  <node name="gps" pkg="gps" type="gps" output="screen"/>
 
   <node name="balltracker" type="TennisBallTracker.py" pkg="rover" />
   <node name="sanity" pkg="sanity" type="sanity" output="screen"/>
 
-  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
+    <arg name="fragment_timeout" value="10000"/>
+  </include>
   
 </launch>
