@@ -4,13 +4,18 @@
   <arg name="lim_steer"     default="0.5"/>
   <arg name="max_steer_mod" default="0.5"/>
   <arg name="duino_enc"     default="/dev/ttyACM0"/> 
+  <arg name="duino_drill"   default="/dev/ttyUSB1"/>
+
+  <env name='ROS_IP' value='192.168.1.199'/>
+  <!-- <env name='ROS_IP' value='10.0.5.2'/> -->
 
   <node name="underling_mk2" pkg="rover" type="underling_mk2" output="screen" args="$(arg lim_drive) $(arg lim_steer) $(arg max_steer_mod)"/>
 
   <node name="sanity" pkg="sanity" type="sanity" output="screen"/>
 
   <node name="serial_node_enc" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_enc)"/>
-
+  <node name="serial_node_drill" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_drill)"/>
+  
   <!-- Fake lat/long is for the location of the workshop. -->
   <include file="$(find autopilot)/launch/autopilot.launch"/>
   <!-- Fake lat/long is for the location of the workshop. -->

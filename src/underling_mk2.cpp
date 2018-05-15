@@ -41,9 +41,9 @@ using namespace std;
 // __________________________Definitions___________________________
 #define LOOP_HERTZ 50 // Main control loop rate
 
-#define K_P 1.2
-#define K_I 5.0
-#define K_D 0.025
+#define K_P 1 //1.2
+#define K_I 2 //5.0
+#define K_D 0.01 //0.025
 
 #define MIN_VOLTAGE 10.0
 
@@ -77,7 +77,7 @@ const float iteration_time = 1.0/LOOP_HERTZ;	// Iteration time of the main loop
 
 int req_RPM[4] = {0,0,0,0};		// The RPM values which are desired for each wheel
 int actual_RPM[4] = {0,0,0,0}; 	// The RPM values for each wheel as reported by the Arduino
-int steer_mod[4] = {0,0,1,0};
+int steer_mod[4] = {1,0,0,1};
 float MAX_STEER_MOD = 0.5;
 int shits_printed = 0;
 
@@ -151,7 +151,7 @@ int rollover(int value, int max, int min)
 * Input:	const rover::DriveCmd::ConstPtr& msg) - The message object containing the relevent data
 ***************************************************************************************************/
 void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
-{    
+{   
        int speedL, speedR;
     //ROS_INFO("cb received\n");
       //ROS_INFO("alive\n");
@@ -197,6 +197,7 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
         req_RPM[3] = speedL;
         //ROS_INFO_STREAM(req_RPM[0] << ' ' << req_RPM[1] << ' ' << req_RPM[2] << ' ' << req_RPM[3]);
       }
+      
 }
 
 /***************************************************************************************************
@@ -355,8 +356,8 @@ int main(int argc, char **argv)
   // Enable power to the actuators
   pinMode(ACTUATOR_1_PIN, OUTPUT);
   pinMode(ACTUATOR_2_PIN, OUTPUT);
-  digitalWrite (ACTUATOR_1_PIN, 1);
-  digitalWrite (ACTUATOR_2_PIN, 1);
+  digitalWrite (ACTUATOR_1_PIN, 0);
+  digitalWrite (ACTUATOR_2_PIN, 0);
 
   ros::Duration(5).sleep();
 
@@ -399,7 +400,11 @@ int main(int argc, char **argv)
     //ROS_INFO_STREAM(state);
     if(state == "STANDBY")
     {
-	    drive_pwm[0] = 0;
+        digitalWrite (ACTUATOR_1_PIN, 0);
+        digitalWrite (ACTUATOR_2_PIN, 0);
+
+
+        drive_pwm[0] = 0;
         drive_pwm[1] = 0;
         drive_pwm[2] = 0;
         drive_pwm[3] = 0;
@@ -412,7 +417,12 @@ int main(int argc, char **argv)
         {
             ROS_INFO_STREAM("STATE SET TO STANDBY - SETTING PWM TO 0");
             shits_printed = 0;
-         }
+        }
+    }
+    else
+    {
+      digitalWrite (ACTUATOR_1_PIN, 1);
+      digitalWrite (ACTUATOR_2_PIN, 1);
     }
 
     for (int i = 0; i < 4; i++)
