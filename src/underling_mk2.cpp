@@ -26,6 +26,7 @@
 #include <wiringPi.h>
 #include <string>
 #include "pca9685/src/pca9685.h" // PWM board library
+#include <signal.h>
 using namespace std;
 
 // __________________________ROS includes__________________________
@@ -58,6 +59,9 @@ using namespace std;
 #define B_R_DIR_PIN 24 // 19
 #define F_STR_PIN 27 // 16
 #define B_STR_PIN 28 // 20
+
+#define ACTUATOR_1_PIN 22 // 6
+#define ACTUATOR_2_PIN 25 // 26
 
 // Global variables
 float limit_drive = 0;
@@ -236,6 +240,21 @@ void voltage_cb(const rover::Voltages::ConstPtr& msg)
 }
 
 
+//--**--..--**--..--**--..--**--..--**--..--**--..--**--..--**--..--**--
+// SigintHandler:
+//    Overrides the default ROS sigint handler for Ctrl+C.
+//--..--**--..--**--..--**--..--**--..--**--..--**--..--**--..--**--..--
+void SigintHandler(int sig)
+{
+  // Disable power to the actuators
+  digitalWrite (ACTUATOR_1_PIN, 0);
+  digitalWrite (ACTUATOR_2_PIN, 0);
+
+  // All the default sigint handler does is call shutdown()
+  ros::shutdown();
+}
+
+
 int main(int argc, char **argv)
 {
   // ********************* ROS ************************* //
@@ -248,6 +267,13 @@ int main(int argc, char **argv)
   ros::Subscriber encoders_sub = n.subscribe("/encoders", 5, encoders_cb);		
   ros::Subscriber voltage_sub = n.subscribe("/voltage", 1, voltage_cb);	
   ros::Publisher reqRPM_pub = n.advertise<rover::ReqRPM>("req_rpm", 4);
+
+  // Override the default ros sigint handler.
+  signal(SIGINT, SigintHandler);
+
+  // Enable power to the actuators
+  digitalWrite (ACTUATOR_1_PIN, 1);
+  digitalWrite (ACTUATOR_2_PIN, 1);
 
   // If no heartbeat for 2 seconds, rover dies
   const int hbeat_timeout = 2*LOOP_HERTZ;
