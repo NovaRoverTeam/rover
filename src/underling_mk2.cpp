@@ -266,6 +266,21 @@ void SigintHandler(int sig)
 }
 
 
+//--**--..--**--..--**--..--**--..--**--..--**--..--**--..--**--..--**--
+// SigintHandler:
+//    Overrides the default ROS sigint handler for Ctrl+C.
+//--..--**--..--**--..--**--..--**--..--**--..--**--..--**--..--**--..--
+void SigintHandler(int sig)
+{
+  // Disable power to the actuators
+  digitalWrite (ACTUATOR_1_PIN, 0);
+  digitalWrite (ACTUATOR_2_PIN, 0);
+
+  // All the default sigint handler does is call shutdown()
+  ros::shutdown();
+}
+
+
 int main(int argc, char **argv)
 {
   // ********************* ROS ************************* //
@@ -283,6 +298,13 @@ int main(int argc, char **argv)
   // Override the default ros sigint handler.
   signal(SIGINT, SigintHandler);
 
+<<<<<<< HEAD
+  // Enable power to the actuators
+  digitalWrite (ACTUATOR_1_PIN, 1);
+  digitalWrite (ACTUATOR_2_PIN, 1);
+
+=======
+>>>>>>> f0cc66ff654a07651ee656571da29468fcfb1d61
   // If no heartbeat for 2 seconds, rover dies
   const int hbeat_timeout = 2*LOOP_HERTZ;
 
