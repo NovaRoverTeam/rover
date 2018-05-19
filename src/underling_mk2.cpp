@@ -34,45 +34,44 @@ using namespace std;
 #include <rover/ReqRPM.h>
 
 // __________________________Definitions___________________________
-#define LOOP_HERTZ 	50 // Main control loop rate
-#define ON_THE_SPOT_THRESHOLD 0.2 // Highest drive percentage value before
+#define LOOP_HERTZ              50 // Main control loop rate
+#define ON_THE_SPOT_THRESHOLD   0.2 // Highest drive percentage value before
 
 // PID K parameters
-#define K_P 		1
-#define K_I			2
-#define K_D			0.01
+#define K_P     1
+#define K_I     2
+#define K_D     0.01
 
 // PWM/RPM Definitions
-#define PIN_BASE	160
-#define PWM_HERTZ	1000
-#define MAX_PWM		4096 // Max PWM of pca9685
-#define MAX_RPM 	128  // Legacy? Max motor RPMs should be lower
+#define PIN_BASE    160
+#define PWM_HERTZ   1000
+#define MAX_PWM     4096 // Max PWM of pca9685
+#define MAX_RPM     128  // Legacy? Max motor RPMs should be lower
 
 // Pin definitions for direction-changing GPIOs
-#define B_L_DIR_PIN	4	// 23
-#define F_R_DIR_PIN 5 	// 24
-#define F_L_DIR_PIN 23 	// 13
-#define B_R_DIR_PIN 24 	// 19
-#define RELAY_1_PIN 22	// 6
-#define RELAY_2_PIN 25	// 26
+#define B_L_DIR_PIN 4   // 23
+#define F_R_DIR_PIN 5   // 24
+#define F_L_DIR_PIN 23  // 13
+#define B_R_DIR_PIN 24  // 19
+#define RELAY_1_PIN 22  // 6
+#define RELAY_2_PIN 25  // 26
 
 #define NORMAL_DRIVE        0
 #define ON_THE_SPOT_LEFT    1
 #define ON_THE_SPOT_RIGHT   2
 
 // Global variables
-float limit_drive	= 0;
-float limit_steer	= 0;
-float drive_pcnt	= 0;	// Desired wheel speed percentage
-float steer_pcnt	= 0;	// Desired steering speed percentage
+float limit_drive   = 0;
+float limit_steer   = 0;
+float drive_pcnt    = 0;    // Desired wheel speed percentage
+float steer_pcnt    = 0;    // Desired steering speed percentage
 
 
-const float iteration_time = 1.0/LOOP_HERTZ;	// Iteration time of the main loop
+const float iteration_time = 1.0/LOOP_HERTZ;    // Iteration time of the main loop
 
-int desired_RPM[4] = {0,0,0,0};		// The RPM values which are desired for each wheel
-int actual_RPM[4] = {0,0,0,0}; 	// The RPM values for each wheel as reported by the Arduino
-int steer_mod[4] = {1,0,0,1};
-int shits_printed = 0;
+int desired_RPM[4]  = {0,0,0,0};    // The RPM values which are desired for each wheel
+int actual_RPM[4]   = {0,0,0,0};    // The RPM values for each wheel as reported by the Arduino
+int steer_mod[4]    = {1,0,0,1};
 
 /***************************************************************************************************
 * CLAMP FUNCTION
@@ -80,11 +79,11 @@ int shits_printed = 0;
 * A convenience function - this function clamps a value within a certain range, dependent on
 * the passed minimum and maximum argument values.
 *
-* Inputs:	int value - The value to be clamped
-*			int max - The maximum value this value may be
-*			int min - The minimum value this value may be
+* Inputs:   int value - The value to be clamped
+*           int max - The maximum value this value may be
+*           int min - The minimum value this value may be
 *
-* Output:	Int of either value, min or max, depending on value.
+* Output:   Int of either value, min or max, depending on value.
 * todo: change arguments from (...,max,min) to (...,min,max) for sanity and modify code appropriately
 ***************************************************************************************************/
 int clamp(int value, int max, int min)
@@ -109,7 +108,7 @@ int MapRPMToPWM(float RPM)
     if(RPM > 0) 
     {
         PWM = round((RPM + 1.0776808965)/0.0287579686); // 
-        PWM = clamp(PWM, MAX_PWM, 0);	// Clamp PWM to valid value
+        PWM = clamp(PWM, MAX_PWM, 0);   // Clamp PWM to valid value
     }
     else PWM = 0;
     return PWM;
@@ -169,13 +168,13 @@ void Set_Wheel_Directions(int direction)
 * called whenever new "cmd_data" data is published and sets the new acceleration and 
 * steering percentage for the rover via global variables.
 *
-* Input:	const rover::DriveCmd::ConstPtr& msg) - The message object containing the relevent data
+* Input:    const rover::DriveCmd::ConstPtr& msg) - The message object containing the relevent data
 ***************************************************************************************************/
 void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
 {   
     int speedL, speedR;
-    drive_pcnt = msg->acc;              
-    steer_pcnt = msg->steer; 
+    drive_pcnt = msg->acc;
+    steer_pcnt = msg->steer;
 
     if(fabs(drive_pcnt) < ON_THE_SPOT_THRESHOLD)
     {
@@ -210,7 +209,7 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
 * called whenever new RPM calculations are sent by the Arduino and saves the RPM values into the
 * global array actual_RPM so the data may be used in the motor PID controller.
 *
-* Input:	const rover::DriveCmd::ConstPtr& msg - The message object containing the relevent data;
+* Input:    const rover::DriveCmd::ConstPtr& msg - The message object containing the relevent data;
             four fields of ints contain the RPM values for each wheel.
 ***************************************************************************************************/
 void encoders_cb(const rover::RPM::ConstPtr& msg)
@@ -228,7 +227,7 @@ void encoders_cb(const rover::RPM::ConstPtr& msg)
 * The callback function for the subscription to new drive limit value. This function sets the drive
 * limit on the rover to the value included in the message.
 *
-* Input:	const std_msgs::Float32::ConstPtr& msg - The message data should be a single float 
+* Input:    const std_msgs::Float32::ConstPtr& msg - The message data should be a single float 
             between 0-1, representing the maximum drive power between 0-100%.
 ***************************************************************************************************/
 void limit_drive_cb(const std_msgs::Float32::ConstPtr& msg)
@@ -263,10 +262,10 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(LOOP_HERTZ);
   
     // Declare publishers and subscribers
-    ros::Subscriber     drivecmd_sub	= n.subscribe("cmd_data", 5, cmd_data_cb);
-    ros::Subscriber     encoders_sub 	= n.subscribe("/encoders", 5, encoders_cb);		
+    ros::Subscriber     drivecmd_sub    = n.subscribe("cmd_data", 5, cmd_data_cb);
+    ros::Subscriber     encoders_sub    = n.subscribe("/encoders", 5, encoders_cb);		
     ros::Subscriber     limit_drive_sub = n.subscribe("/limit_drive", 1, limit_drive_cb);
-    ros::Publisher      reqRPM_pub 		= n.advertise<rover::ReqRPM>("req_rpm", 4);
+    ros::Publisher      reqRPM_pub      = n.advertise<rover::ReqRPM>("req_rpm", 4);
 
     string state; // Holds the current parameter state
     bool drive_dir = 1; // Wheel direction
