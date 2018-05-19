@@ -102,18 +102,41 @@ float fclamp(float value, float max, float min)
     else return value;
 }
 
+/***************************************************************************************************
+* MAP RPM TO PWM FUNCTION
+*
+* This function maps the desired RPM value for a wheel to a PWM value and returns it. To obtain the
+* mapping function, measure the RPM output of the wheels for various PWM values. (Temporarily
+* hardcode a loop that increments PWM output to the wheels in increments of 100 and measure 
+* corresponding RPM values.) Plot these measurements in Microsoft Excel (or equivalent) and obtain
+* the line of best fit. Finally, manipulate this equation to obtain the PWM output for an RPM input.
+*
+* Inputs:   float RPM - The desired RPM of the wheel
+*
+* Output:   int PWM - The PWM output to obtain the desired RPM
+***************************************************************************************************/
 int MapRPMToPWM(float RPM)
 {
     int PWM;
     if(RPM > 0) 
     {
-        PWM = round((RPM + 1.0776808965)/0.0287579686); // 
+        PWM = round((RPM + 1.0776808965)/0.0287579686); // The rearranged line of best fit equation
         PWM = clamp(PWM, MAX_PWM, 0);   // Clamp PWM to valid value
     }
     else PWM = 0;
     return PWM;
 }
 
+/***************************************************************************************************
+* SET WHEEL PWMS FUNCTION
+*
+* This function hardsets the PWMs for each wheel.
+*
+* Inputs:   int pwm0 - Backleft wheel PWM
+            int pwm1 - Frontleft wheel PWM
+            int pwm2 - Frontright wheel PWM
+            int pwm3 - Backright wheel PWM
+***************************************************************************************************/
 void Set_Wheel_PWMs(int pwm0, int pwm1, int pwm2, int pwm3)
 {
     drive_pwm[0] = pwm0;
@@ -122,6 +145,16 @@ void Set_Wheel_PWMs(int pwm0, int pwm1, int pwm2, int pwm3)
     drive_pwm[3] = pwm3;
 }
 
+/***************************************************************************************************
+* SET DESIRED WHEEL SPEEDS FUNCTION
+*
+* This function hardsets the desired RPMs for each wheel.
+*
+* Inputs:   int rpm0 - Backleft wheel RPM
+            int rpm1 - Frontleft wheel RPM
+            int rpm2 - Frontright wheel RPM
+            int rpm3 - Backright wheel RPM
+***************************************************************************************************/
 void Set_Desired_Speeds(int rpm0, int rpm1, int rpm2, int rpm3)
 {
     desired_RPM[0] = rpm0;
@@ -130,6 +163,17 @@ void Set_Desired_Speeds(int rpm0, int rpm1, int rpm2, int rpm3)
     desired_RPM[3] = rpm3;
 }
 
+/***************************************************************************************************
+* SET WHEEL DIRECTIONS FUNCTION
+*
+* This function takes in a direction for the rover to drive in (state machine: int input corresponds 
+* to a different state) and applies the appropriate steering modifications.
+*
+* Inputs:   int direction - The desired driving direction:
+                                - 0 (NORMAL DRIVE): All wheels spin in the same direction
+                                - 1 (ON THE SPOT LEFT): Left wheels spin backwards, right forwards
+                                - 2 (ON THE SPOT RIGHT): Right wheels spin forwards, left backwards
+***************************************************************************************************/
 void Set_Wheel_Directions(int direction)
 {
     switch(direction)
@@ -153,6 +197,7 @@ void Set_Wheel_Directions(int direction)
             steer_mod[3] = 0;
             break;
         default:
+            // NORMAL DRIVE by default
             steer_mod[0] = 1;
             steer_mod[1] = 0;
             steer_mod[2] = 0;
@@ -173,9 +218,11 @@ void Set_Wheel_Directions(int direction)
 void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
 {   
     int speedL, speedR;
+    // Get driving and steering commands from the mainframe
     drive_pcnt = msg->acc;
     steer_pcnt = msg->steer;
 
+    // Check to see if we are turning on the spot
     if(fabs(drive_pcnt) < ON_THE_SPOT_THRESHOLD)
     {
         if(steer_pcnt < 0) Set_Wheel_Directions(ON_THE_SPOT_LEFT);
@@ -184,9 +231,12 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
         speedL = limit_drive*fabs((steer_pcnt*MAX_RPM)/100); 
         speedR = speedL;     
     }
+    // Otherwise drive normally
     else
     {
         Set_Wheel_Directions(NORMAL_DRIVE);
+        // Applies normal steering if desired. Steering is done by slowing down one side of wheels and speeding
+        // up the other.
         if(steer_pcnt > 0)
         {
             speedL = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)-(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100)); 
@@ -198,7 +248,7 @@ void cmd_data_cb(const rover::DriveCmd::ConstPtr& msg)
             speedR = limit_drive*fabs((drive_pcnt*MAX_RPM)/100)-(limit_steer*fabs(steer_pcnt*(MAX_RPM/2)/100));
         }
     }
-    Set_Desired_Speeds(speedR, speedR, speedL, speedL);
+    Set_Desired_Speeds(speedR, speedR, speedL, speedL); // Set new desired wheel speeds
       
 }
 
@@ -376,10 +426,10 @@ int main(int argc, char **argv)
         // Publish desired wheel speeds for sanity checker
         // todo: change mainframe code to publish just desired RPM values rather than steer/drive %
         rover::ReqRPM msg;
-        msg.req_rpm_fl = req_RPM[0];
-        msg.req_rpm_fr = req_RPM[1];
-        msg.req_rpm_bl = req_RPM[2];
-        msg.req_rpm_br = req_RPM[3];
+        msg.req_rpm_fl = desired_RPM[0];
+        msg.req_rpm_fr = desired_RPM[1];
+        msg.req_rpm_bl = desired_RPM[2];
+        msg.req_rpm_br = desired_RPM[3];
         reqRPM_pub.publish(msg);
 
         ros::spinOnce();
