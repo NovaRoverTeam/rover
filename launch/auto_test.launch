@@ -26,5 +26,6 @@
   <node name="bearing" pkg="rtimulib_ros" type="rtimulib_ros" output="screen"/>
 
   <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+  <!--include file="$(find comms)/launch/rover_comms.launch"/-->
 
 </launch>

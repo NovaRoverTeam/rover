@@ -57,6 +57,7 @@ add_message_files(
   ReqRPM.msg
   Voltages.msg
   Retrieve.msg
+  Ball.msg
   #RawControl.msg
   #Command.msg
 )
