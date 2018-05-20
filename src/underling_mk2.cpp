@@ -71,7 +71,8 @@ const float iteration_time = 1.0/LOOP_HERTZ;    // Iteration time of the main lo
 
 int desired_RPM[4]  = {0,0,0,0};    // The RPM values which are desired for each wheel
 int actual_RPM[4]   = {0,0,0,0};    // The RPM values for each wheel as reported by the Arduino
-int steer_mod[4]    = {1,0,0,1};
+int steer_mod[4]    = {1,0,0,1};    // The rotation direction of each wheel
+int drive_pwm[4]    = {0,0,0,0};    // The PWM values which are output to the motor controllers
 
 /***************************************************************************************************
 * CLAMP FUNCTION
@@ -335,11 +336,10 @@ int main(int argc, char **argv)
 
     // PID variables
     float error[4]          = {0,0,0,0};
-    float error_prior[4] 	= {0,0,0,0};
+    float error_prior[4]    = {0,0,0,0};
     float integral[4]       = {0,0,0,0};
     float derivative[4]     = {0,0,0,0};
     float output[4]         = {0,0,0,0};
-    int   drive_pwm[4]      = {0,0,0,0};
 
     if (argc == 3)
     {
