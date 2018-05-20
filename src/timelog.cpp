@@ -10,7 +10,6 @@
 
 using namespace std;
 
-#define LOOP_HERTZ 20
 
 int bearing;
 double latitude;
@@ -32,7 +31,6 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "timelog");
   ros::NodeHandle n;
-  ros::Rate loop_rate(LOOP_HERTZ);
   ofstream file;
   file.open ("/home/nova/catkin_ws/src/rover/timestamp.txt");
 
@@ -46,7 +44,7 @@ int main(int argc, char **argv)
     file << ctime(&t) << latitude << ", " << longitude << "\n" << bearing << "\n\n";
 
     ros::spinOnce();
-    loop_rate.sleep();
+    ros::Duration(10).sleep(); //Sleep for 10 seconds
   }
 
   file.close();
