@@ -10,7 +10,7 @@ from rover.msg import Ball
 ###################################################################################################
 def main():
 
-    pub = rospy.Publisher('ball', Ball)
+    pub = rospy.Publisher('ball', Ball, queue_size=1)
     rospy.init_node('Ball')
 
     capWebcam = cv2.VideoCapture(0)                     # declare a VideoCapture object and associate to webcam, 0 => use 1st webcam
@@ -20,7 +20,8 @@ def main():
         os.system("pause")                                              # pause until user presses a key so user can see error message
         return                                                          # and exit function (which exits program)
 
-    while cv2.waitKey(1) != 27 and capWebcam.isOpened():                # until the Esc key is pressed or webcam connection is lost    
+    while not (rospy.is_shutdown() or not capWebcam.isOpened()):                # until the Esc key is pressed or webcam connection is lost    
+#    while cv2.waitKey(1) != 27 and capWebcam.isOpened():                # until the Esc key is pressed or webcam connection is lost    
         blnFrameReadSuccessfully, imgOriginal = capWebcam.read()            # read next frame
 
         if not blnFrameReadSuccessfully or imgOriginal is None:             # if frame was not read successfully

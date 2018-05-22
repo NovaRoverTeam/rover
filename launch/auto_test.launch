@@ -2,15 +2,14 @@
  
   <arg name="lim_drive"     default="0.3"/>
   <arg name="lim_steer"     default="0.5"/>
-  <arg name="max_steer_mod" default="0.5"/>
   <arg name="duino_enc"     default="/dev/ttyACM0"/> 
-  <arg name="duino_drill"   default="/dev/ttyUSB1"/>
+  <arg name="duino_drill"   default="/dev/ttyUSB0"/>
 
   <env name='ROS_IP' value='192.168.1.199'/>
   <!-- <env name='ROS_IP' value='10.0.5.2'/> -->
 
-  <node name="underling_mk2" pkg="rover" type="underling_mk2" output="screen" args="$(arg lim_drive) $(arg lim_steer) $(arg max_steer_mod)"/>
-
+  <node name="underling_mk2" pkg="rover" type="underling_mk2" output="screen" args="$(arg lim_drive) $(arg lim_steer)"/>
+  <node name="balltracker" type="TennisBallTracker.py" pkg="rover"/>
   <node name="sanity" pkg="sanity" type="sanity" output="screen"/>
 
   <node name="serial_node_enc" pkg="rosserial_python" type="serial_node.py" output="screen" args="$(arg duino_enc)"/>
