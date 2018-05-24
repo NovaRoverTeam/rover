@@ -20,7 +20,7 @@ def main():
         os.system("pause")                                              # pause until user presses a key so user can see error message
         return                                                          # and exit function (which exits program)
 
-    while not (rospy.is_shutdown() or not capWebcam.isOpened()):                # until the Esc key is pressed or webcam connection is lost    
+    while not (rospy.is_shutdown() or capWebcam.isOpened()):                # until the Esc key is pressed or webcam connection is lost    
 #    while cv2.waitKey(1) != 27 and capWebcam.isOpened():                # until the Esc key is pressed or webcam connection is lost    
         blnFrameReadSuccessfully, imgOriginal = capWebcam.read()            # read next frame
 
