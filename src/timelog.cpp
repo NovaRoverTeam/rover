@@ -6,35 +6,45 @@
 #include <ctime>
 
 #include <std_msgs/Int32.h>
+#include <gps/Gps.h>
 
 using namespace std;
 
-#define LOOP_HERTZ 20
 
 int bearing;
+double latitude;
+double longitude;
 
 void bearing_cb(const std_msgs::Int32::ConstPtr& msg)
 { 
   bearing = msg->data;
 }
 
+void GPS_cb(const gps::Gps::ConstPtr& msg)  
+{   
+  latitude = msg->latitude;
+  longitude = msg->longitude;
+}
+
+
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "timelog");
   ros::NodeHandle n;
-  ros::Rate loop_rate(LOOP_HERTZ);
   ofstream file;
   file.open ("/home/nova/catkin_ws/src/rover/timestamp.txt");
 
-  ros::Subscriber abc_sub = n.subscribe("/bearing", 1, bearing_cb);  
+  ros::Subscriber bearing_sub = n.subscribe("/bearing", 1, bearing_cb);
+  ros::Subscriber gps_sub = n.subscribe("/gps/gps_data", 1, GPS_cb);
+ 
 
   while (ros::ok())
   {
     time_t t = time((time_t*) 0);
-    file << ctime(&t) << bearing << "\n\n";
+    file << ctime(&t) << latitude << ", " << longitude << "\n" << bearing << "\n\n";
 
     ros::spinOnce();
-    loop_rate.sleep();
+    ros::Duration(10).sleep(); //Sleep for 10 seconds
   }
 
   file.close();
