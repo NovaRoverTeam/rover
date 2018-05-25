@@ -216,7 +216,7 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 #add_executable(arm src/arm.cpp include/pca9685/src/pca9685.c)
 
 
-add_executable(underling src/underling_simple.cpp include/pca9685/src/pca9685.c)
+#add_executable(underling src/underling_simple.cpp include/pca9685/src/pca9685.c)
 add_executable(underling_mk2 src/underling_mk2.cpp include/pca9685/src/pca9685.c)
 add_executable(timelog src/timelog.cpp)
 
@@ -232,11 +232,11 @@ if (NOT TARGET gamepad)
 endif()
 
 
-target_link_libraries(underling wiringPi ${catkin_LIBRARIES})
+#target_link_libraries(underling wiringPi ${catkin_LIBRARIES})
 target_link_libraries(underling_mk2 wiringPi ${catkin_LIBRARIES})
 target_link_libraries(timelog ${catkin_LIBRARIES})
 
-add_dependencies(underling ${catkin_EXPORTED_TARGETS} ${rover_EXPORTED_TARGETS})
+#add_dependencies(underling ${catkin_EXPORTED_TARGETS} ${rover_EXPORTED_TARGETS})
 add_dependencies(underling_mk2 ${catkin_EXPORTED_TARGETS} ${rover_EXPORTED_TARGETS})
 
 #target_link_libraries(debug wiringPi wiringPiPca9685 ${catkin_LIBRARIES})
