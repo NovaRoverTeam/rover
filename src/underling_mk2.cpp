@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <wiringPi.h>
+#include <wiringSerial.h>
 #include <string>
 #include "pca9685/src/pca9685.h" // PWM board library
 #include <signal.h>
@@ -29,6 +30,7 @@ using namespace std;
 
 // __________________________ROS includes__________________________
 #include <rover/DriveCmd.h>
+#include <rover/ArmCmd.h>
 #include <rover/RPM.h>
 #include <std_msgs/Float32.h>
 #include <rover/ReqRPM.h>
@@ -60,6 +62,7 @@ using namespace std;
 #define B_R_DIR_PIN 24  // 19
 #define RELAY_1_PIN 22  // 6
 #define RELAY_2_PIN 25  // 26
+#define ZERO_RST_PIN 29  // 21
 
 #define NORMAL_DRIVE        0
 #define ON_THE_SPOT_LEFT    1
@@ -81,6 +84,11 @@ int drive_pwm[4]    = {0,0,0,0};    // The PWM values which are output to the mo
 int ball_tracking_enabled = 0;
 int ball_x = -1;
 int ball_radius = -1;
+
+int arm_fd; // File descriptor for arm serial connection
+string prev_state; // Keep track of previous state for arm Arduino reset
+
+ros::NodeHandle* n;
 
 /***************************************************************************************************
 * CLAMP FUNCTION
@@ -215,6 +223,29 @@ void Set_Wheel_Directions(int direction)
 
 }
 
+/********************************************************************
+* COMMAND DATA CALLBACK FUNCTION
+*
+* The callback function for the subscription to drive command topic $
+* called whenever new "cmd_data" data is published and sets the new $
+* steering percentage for the rover via global variables.
+*
+* Input:    const rover::DriveCmd::ConstPtr& msg) - The message obje$
+********************************************************************/
+void arm_cmd_data_cb(const rover::ArmCmd::ConstPtr& msg)
+{
+  ROS_INFO("rcvd arm cmd");
+
+  arm_fd = serialOpen("/dev/ttyACM0", 57600); 
+  
+  serialPrintf(arm_fd, "%d %d %d %d %d %d %d %d\n", -msg->base,
+    msg->shoulder, -msg->forearm, -msg->wrist_x, -msg->wrist_y,
+    -msg->twist, -msg->end_angle, -msg->end_pos);
+
+  serialClose(arm_fd);
+}
+
+
 /***************************************************************************************************
 * COMMAND DATA CALLBACK FUNCTION
 *
@@ -329,9 +360,15 @@ void ball_cb(const rover::Ball::ConstPtr& msg)
             else 
             {
                 ROS_INFO_STREAM("ROVER: BALL LOCATED, SETTING RPM TO 0");
+
                 Set_Wheel_PWMs(0, 0, 0, 0);
                 Set_Desired_Speeds(0, 0, 0, 0);
                 ball_tracking_enabled = 0;
+
+		drive_pcnt    = 0;  
+		steer_pcnt    = 0;  
+
+                n->setParam("/STATE", "DRIVE"); // Exit autonomous mode when done                
             }
         }
     }
@@ -349,6 +386,8 @@ void SigintHandler(int sig)
     // Disable power to the relay
     digitalWrite (RELAY_1_PIN, 0);
     digitalWrite (RELAY_2_PIN, 0);
+    
+    serialClose(arm_fd);
 
     // All the default sigint handler does is call shutdown()
     ros::shutdown();
@@ -359,15 +398,16 @@ int main(int argc, char **argv)
     // ********************* ROS ************************* //
 
     ros::init(argc, argv, "underling");
-    ros::NodeHandle n;
+    n = new ros::NodeHandle();
     ros::Rate loop_rate(LOOP_HERTZ);
   
     // Declare publishers and subscribers
-    ros::Subscriber     drivecmd_sub    = n.subscribe("cmd_data", 5, cmd_data_cb);
-    ros::Subscriber     encoders_sub    = n.subscribe("/encoders", 5, encoders_cb);		
-    ros::Subscriber     limit_drive_sub = n.subscribe("/limit_drive", 1, limit_drive_cb);
-    ros::Subscriber     ball_sub = n.subscribe("/ball", 1, ball_cb);
-    ros::Publisher      reqRPM_pub      = n.advertise<rover::ReqRPM>("req_rpm", 4);
+    ros::Subscriber     drivecmd_sub    = n->subscribe("cmd_data", 5, cmd_data_cb);
+    ros::Subscriber     armcmd_sub      = n->subscribe("arm_cmd_data", 1, arm_cmd_data_cb);
+    ros::Subscriber     encoders_sub    = n->subscribe("/encoders", 5, encoders_cb);		
+    ros::Subscriber     limit_drive_sub = n->subscribe("/limit_drive", 1, limit_drive_cb);
+    ros::Subscriber     ball_sub        = n->subscribe("/ball", 1, ball_cb);
+    ros::Publisher      reqRPM_pub      = n->advertise<rover::ReqRPM>("req_rpm", 4);
 
     string state; // Holds the current parameter state
     bool drive_dir = 1; // Wheel direction
@@ -422,7 +462,12 @@ int main(int argc, char **argv)
     digitalWrite (RELAY_1_PIN, 0);
     digitalWrite (RELAY_2_PIN, 0);
 
-    ros::Duration(5).sleep(); // Allow some time for setup
+    pinMode(ZERO_RST_PIN, OUTPUT);
+    digitalWrite (ZERO_RST_PIN, 1); // Reset low
+
+    ros::Duration(3).sleep(); // Allow some time for setup
+
+    n->setParam("/MODE", "TEST"); // Make sure we start in testing mode
 
     // *************************** MAIN LOOP *************************** //
 
@@ -442,8 +487,27 @@ int main(int argc, char **argv)
 
             drive_pwm[k]    = MapRPMToPWM(round(actual_RPM[k]+output[k]));
         }
-   
-        n.getParam("/STATE", state);
+
+        // Reset Arduino when switching to ARM mode
+        n->getParam("/STATE", state);
+        if ((state == "ARM") && (prev_state != state))
+        {
+          ROS_INFO("resetting arduino");
+          digitalWrite (ZERO_RST_PIN, 0); // Reset high
+          ros::Duration(0.1).sleep();
+          digitalWrite (ZERO_RST_PIN, 1); // Reset low
+
+          ros::Duration(1.0).sleep(); // Pause to let Arduino start up
+        }
+        else if ((prev_state == "ARM") && (state != "ARM"))
+        {
+          arm_fd = serialOpen("/dev/ttyACM0", 57600);  
+          serialPrintf(arm_fd, "0 0 0 0 0 0 0 0\n");
+          serialClose(arm_fd);
+        }
+        prev_state = state;
+  
+
         if(state == "STANDBY")
         {
             digitalWrite (RELAY_1_PIN, 0);
@@ -460,7 +524,7 @@ int main(int argc, char **argv)
         }
         else
         {
-            n.getParam("/AUTO_STATE", state);
+            n->getParam("/AUTO_STATE", state);
             if(state == "SEARCH")
             {
                 ball_tracking_enabled = 1;
