@@ -236,7 +236,7 @@ void arm_cmd_data_cb(const rover::ArmCmd::ConstPtr& msg)
 {
   ROS_INFO("rcvd arm cmd");
 
-  arm_fd = serialOpen("/dev/ttyACM0", 57600); 
+  arm_fd = serialOpen("/dev/ttyACM1", 57600); 
   
   serialPrintf(arm_fd, "%d %d %d %d %d %d %d %d\n", -msg->base,
     msg->shoulder, -msg->forearm, -msg->wrist_x, -msg->wrist_y,
@@ -501,7 +501,7 @@ int main(int argc, char **argv)
         }
         else if ((prev_state == "ARM") && (state != "ARM"))
         {
-          arm_fd = serialOpen("/dev/ttyACM0", 57600);  
+          arm_fd = serialOpen("/dev/ttyACM1", 57600);  
           serialPrintf(arm_fd, "0 0 0 0 0 0 0 0\n");
           serialClose(arm_fd);
         }
