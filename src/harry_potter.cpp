@@ -65,6 +65,7 @@ string drive_desc[] = {"Front Left", "Back Left", "Front Right", "Back Right"};
 
 // Main control loop rate
 #define LOOP_HERTZ 50
+#define PWM_HERTZ   1000
 
 // PIN values
 #define PIN_BASE 160
