@@ -23,8 +23,8 @@
 #include <stdlib.h>
 
 // Controller wiring dependencies
-//#include <wiringPi.h>
-//#include <wiringSerial.h>
+#include <wiringPi.h>
+#include <wiringSerial.h>
 #include "../include/pca9685/src/pca9685.h" // PWM board library
 #include <signal.h>
 
@@ -67,8 +67,8 @@ string drive_desc[] = {"Front Left", "Back Left", "Front Right", "Back Right"};
 #define LOOP_HERTZ 50
 
 // PIN values
-
-
+#define PIN_BASE 160
+int dir_pins[] = {23, 4, 5, 24}
 
 
 /********************************************************************
@@ -196,6 +196,25 @@ int main(int argc, char** argv) {
     }
   }
 
+  // Set up controller
+  int fd = pca9685Setup(PIN_BASE, 0x40, PWM_HERTZ);
+  if (fd < 0)
+  {
+      printf("Error in setup\n");
+      return fd;
+  }
+  pca9685PWMReset(fd); // Reset all outputs
+  wiringPiSetup();
+
+  // Setup initial pins
+  for (int i = 0; i < N_WHEELS; i++)
+  {
+      pinMode (dir_pins[i], OUTPUT);
+      digitalWrite (dir_pins[i], drive_dir[i]));
+  }
+
+
+
   // ROS Functions
   ros::init(argc, argv, "drive");
   n = new ros::NodeHandle();
@@ -214,6 +233,10 @@ int main(int argc, char** argv) {
     // Output PWM and Directional Values to the console
     for (int i = 0; i < N_WHEELS; i++) {
       cout << drive_desc[i] << "\t" << drive_pwm[i] << ", \t" << drive_dir[i] << endl;
+
+      // Output the values to pin outs
+      digitalWrite (dir_pins[i], drive_dir[i]);
+      pwmWrite(PIN_BASE + i, drive_pwm[i]);
     }
 
     // Wait till end of ROS time and loop again
