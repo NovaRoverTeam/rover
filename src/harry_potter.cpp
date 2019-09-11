@@ -29,11 +29,10 @@
 #include <signal.h>
 
 // ROS Include dependencies
-#include <ros.h>
 #include <std_msgs/Float32.h>
 #include "ros/ros.h"
 #include <ros/console.h>
-
+#include <harry_potter/DriveCmd.h>
 using namespace std;
 
 // Handle ROS nodes
@@ -164,11 +163,11 @@ void Calculate_PWM_Values (float forward, float directional) {
 ********************************************************************/
 
 // This function is called when a new ROS message is recieved
-void drive_data_cb(const rover::DriveCmd::ConstPtr& msg)
+void drive_data_cb(const harry_potter::DriveCmd::ConstPtr& msg)
 {
   // Get the message values (and fix them between -100 and 100)
-  float forwardValue = Clamp(-100, 100, msg->acc);
-  float directionalValue = Clamp(-100, 100, msg->steer);
+  float forwardValue = Clamp(-100, 100, msg->rpm);
+  float directionalValue = Clamp(-100, 100, msg->steer_pct);
 
   // Calculate the new PWM and drive directions
   Calculate_PWM_Values(forwardValue, directionalValue);
@@ -204,7 +203,7 @@ int main(int argc, char** argv) {
 
   // Declare publishers and subscribers
   // The number 1 is the dedicated queue size for the messages receieved
-  ros::Subscriber drivecmd_sub = n->subscribe("drive_data", 1, drive_data_cb);
+  ros::Subscriber drivecmd_sub = n->subscribe("/drive_cmd", 1, drive_data_cb);
 
   // While ROS is running
   while (ros::ok()) {
